@@ -342,6 +342,30 @@ body.drawer-open .drawer-shade{display:block}
 .portrait-controls[hidden]{display:none!important}
 .portrait-controls .btn{width:100%;padding:5px}
 @media(max-width:750px){.portrait-toolbar .btn{font-size:13px;padding:5px 2px}.name-preview{font-size:19px}}
+
+/* v43: compact identity panel; expanded controls grow only when used */
+.profile-head{margin-bottom:7px!important}
+.identity-layout{grid-template-columns:minmax(0,1fr) 132px!important;gap:12px!important}
+.identity-left{align-self:start}
+.name-preview{margin:0 0 3px!important;min-height:0!important;line-height:1.55}
+.name-settings{margin:0 0 8px!important;padding:0 0 5px!important}
+.name-settings summary{padding:3px 0!important}
+.name-settings[open]{padding-bottom:10px!important}
+.name-settings[open] summary{margin-bottom:8px!important}
+.portrait-section{width:132px!important}
+.portrait-frame{width:112px!important;height:148px!important;margin-bottom:4px!important}
+.portrait-toolbar{gap:3px!important}
+.portrait-toolbar .btn{padding:3px!important;min-height:25px!important}
+.portrait-controls{padding-top:5px!important}
+.profile-meta{gap:6px!important}
+.profile-meta .profile-select{padding:7px 8px!important}
+@media(max-width:750px){
+ .identity-layout{grid-template-columns:minmax(0,1fr) 91px!important;gap:7px!important}
+ .portrait-section{width:91px!important}
+ .portrait-frame{width:84px!important;height:112px!important}
+ .portrait-toolbar .btn{min-height:23px!important;padding:2px!important}
+ .profile-meta .profile-select{padding:6px!important}
+}
 </style>
 </head>
 <body>

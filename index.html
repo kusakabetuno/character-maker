@@ -387,6 +387,41 @@ body.drawer-open .drawer-shade{display:block}
  .name-settings summary{position:relative;top:auto;right:auto;font-size:11px;padding:3px 6px!important;margin:0 0 7px!important}
  .name-settings[open]{padding:0 0 7px!important}
 }
+
+/* v46: unified 8px rhythm and tighter default profile layout */
+.profile-head{margin:0 0 10px!important}
+.identity-layout{grid-template-columns:minmax(0,1fr) 112px!important;column-gap:16px!important;align-items:start!important}
+.identity-left{display:flex;flex-direction:column;gap:8px!important}
+.name-preview{padding-right:184px!important;margin:0!important;min-height:36px!important;line-height:1.5!important;display:flex;align-items:center}
+.name-settings{margin:0!important;padding:0!important;min-height:0!important}
+.name-settings summary{top:3px!important;right:0!important;padding:5px 9px!important;font-size:12px!important;line-height:1.4!important}
+.name-settings:not([open]){height:0!important}
+.name-settings[open]{height:auto!important;padding:36px 0 0!important}
+.name-settings[open] summary{top:3px!important}
+.name-settings .name-edit,.name-settings .ruby-edit{margin:0 0 8px!important}
+.profile-meta{margin:0!important;gap:8px!important;align-items:center}
+.profile-meta .profile-select{height:38px!important;padding:6px 10px!important;border-radius:8px!important}
+.profile-meta .head-birthday{gap:8px!important}
+.portrait-section{width:112px!important;margin:0!important}
+.portrait-frame{width:100px!important;height:124px!important;margin:0 auto 5px!important}
+.portrait-toolbar{width:100px;margin:0 auto;gap:5px!important}
+.portrait-toolbar .btn{min-height:24px!important;padding:3px!important;border-radius:6px!important}
+.portrait-controls{margin-top:6px!important}
+@media(max-width:750px){
+ .identity-layout{grid-template-columns:minmax(0,1fr) 86px!important;column-gap:8px!important}
+ .identity-left{gap:7px!important}
+ .name-preview{padding-right:0!important;min-height:29px!important}
+ .name-settings:not([open]){height:auto!important}
+ .name-settings summary{position:relative!important;right:auto!important;top:auto!important;font-size:11px!important;padding:3px 6px!important}
+ .name-settings[open]{padding:0!important}
+ .profile-meta{gap:6px!important}
+ .profile-meta .profile-select{height:34px!important;padding:5px!important}
+ .profile-meta .head-birthday{gap:6px!important}
+ .portrait-section{width:86px!important}
+ .portrait-frame{width:82px!important;height:103px!important;margin-bottom:4px!important}
+ .portrait-toolbar{width:82px;gap:3px!important}
+ .portrait-toolbar .btn{min-height:23px!important}
+}
 </style>
 </head>
 <body>

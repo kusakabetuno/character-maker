@@ -476,6 +476,15 @@ body.drawer-open .drawer-shade{display:block}
 .cloud-panel input{width:100%;min-width:0;padding:9px;margin:5px 0;border-radius:7px;border:1px solid var(--line);background:#252930;color:var(--text)}
 .cloud-actions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.cloud-actions .btn{flex:1 1 120px}
 .cloud-panel .cloud-status{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* v59: identical portrait viewport aspect ratio on desktop and mobile.
+   Keep existing widths, derive height so object-fit:contain and saved offsets
+   use the same coordinate system on all screen sizes. */
+.portrait-frame{
+  aspect-ratio:112 / 148 !important;
+  height:auto !important;
+  box-sizing:border-box;
+}
 </style>
 </head>
 <body>

@@ -373,6 +373,20 @@ body.drawer-open .drawer-shade{display:block}
 .name-collapse-label{display:none}
 .name-settings[open] .name-expand-label{display:none}
 .name-settings[open] .name-collapse-label{display:inline}
+
+/* v45: place name edit toggle in the open space to the right of the name */
+.identity-left{position:relative}
+.name-settings{position:static!important;margin:0!important;padding:0!important;border:0!important}
+.name-settings summary{position:absolute;right:4px;top:1px;z-index:2;margin:0!important;padding:5px 8px!important;white-space:nowrap;border:1px solid var(--line);border-radius:7px;background:#30343a;color:var(--text)}
+.name-preview{padding-right:195px;min-height:30px!important;margin-bottom:5px!important}
+.name-settings[open]{padding:37px 0 8px!important}
+.name-settings[open] summary{margin:0!important}
+.name-settings .name-edit,.name-settings .ruby-edit{max-width:480px}
+@media(max-width:750px){
+ .name-preview{padding-right:0;min-height:0!important;margin-bottom:7px!important}
+ .name-settings summary{position:relative;top:auto;right:auto;font-size:11px;padding:3px 6px!important;margin:0 0 7px!important}
+ .name-settings[open]{padding:0 0 7px!important}
+}
 </style>
 </head>
 <body>

@@ -433,6 +433,30 @@ body.drawer-open .drawer-shade{display:block}
 .template-apply-options{display:grid;gap:9px;padding:12px;background:#242830;border:1px solid var(--line);border-radius:9px;font-size:13px}
 .template-apply-options label{display:flex;align-items:center;gap:8px;cursor:pointer}
 @media(max-width:500px){.template-choices{grid-template-columns:1fr;max-height:43vh}}
+
+.character-status{border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0 20px;background:rgba(120,140,170,.055)}
+.status-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.status-head strong{font-size:15px}.status-sub,.status-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:4px}
+.status-tag{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:3px 7px;white-space:nowrap}
+.status-content{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);align-items:center;gap:20px}
+.status-content svg{width:100%;height:auto;overflow:visible}
+.status-detail{display:flex;flex-direction:column;gap:9px;min-width:0}
+.status-row{display:grid;grid-template-columns:100px minmax(0,1fr) 27px;align-items:center;gap:8px;font-size:12px}
+.status-row b{text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.status-meter{height:7px;border-radius:10px;background:#353b47;overflow:hidden}
+.status-meter i{display:block;height:100%;background:#9bb8fb;border-radius:10px}
+.status-summary{font-size:12px;padding-top:6px;border-top:1px solid var(--line)}
+@media(max-width:750px){.character-status{padding:11px;margin:10px 0 15px}.status-content{grid-template-columns:1fr;gap:4px}.status-content svg{max-width:290px;justify-self:center}.status-row{grid-template-columns:100px minmax(0,1fr) 25px}}
+
+/* v53 manual fine-tuning of six character attributes */
+.status-row{grid-template-columns:91px minmax(0,1fr) 53px 26px!important;gap:7px!important}
+.status-row label{font-size:12px}
+.status-row input[type=range]{width:100%;min-width:0;accent-color:#a7c1ff;cursor:pointer}
+.status-row .status-number{width:53px;min-width:0;padding:5px 2px;text-align:center;font-size:12px;border:1px solid var(--line);border-radius:6px;background:var(--bg,#202328);color:var(--text)}
+.status-row .status-auto{border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--text);cursor:pointer;min-height:26px}
+.status-row .status-auto:disabled{opacity:.25;cursor:default}
+.status-manual label{color:#b6caff}
+@media(max-width:750px){.status-row{grid-template-columns:90px minmax(0,1fr) 50px 25px!important;gap:5px!important}}
 </style>
 </head>
 <body>
@@ -656,7 +680,7 @@ if(!chars.some(c=>c.id===SAMPLE_AYUKAWA_RYUJI.id || c.name==="鮎川龍二（ユ
 
 const $=s=>document.querySelector(s);
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function save(){localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom))}
+function save(){localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom));refreshCharacterStatus()}
 function toast(t){$("#toast").textContent=t;$("#toast").classList.add("show");setTimeout(()=>$("#toast").classList.remove("show"),1300)}
 function getCurrent(){const c=chars.find(c=>c.id===current);if(c){c.fields=c.fields||{};CATS.forEach(k=>{if(!Array.isArray(c.fields[k]))c.fields[k]=[]})}return c}
 function visibleOptions(cat){
@@ -776,12 +800,78 @@ function setupPortrait(c){
  frame.onpointerup=()=>{if(start){start=null;save()}};
  frame.onpointercancel=()=>{start=null};
 }
+
+const STATUS_AXES=[
+ ["社交性",[["性格","社交的,人懐っこい,明るい,陽気,お調子者,おしゃべり,気さく,外交的,ムードメーカー",2],["他人との接し方","話しかけ,社交,盛り上げ,親しみ,積極的,誰とでも,気さく",2],["休日の過ごし方","友人,パーティー,交流,飲み会",1]],[["性格","人見知り,無口,内向的,引っ込み思案,臆病",2],["他人との接し方","距離を置く,警戒,避ける,口数が少ない",2]]],
+ ["知性",[["頭の良さ","頭が良い,頭がいい,優秀,天才,高い,博識,知識,賢い,秀才,頭の回転",3],["得意なこと","推理,研究,分析,勉強,読書,計算,論理,暗記",2],["性格","冷静,論理的,理知的,計画的",1],["よく読む書籍","専門,学術,哲学,科学,歴史,魔導書",1]],[["頭の良さ","勉強は苦手,頭が悪い,低い,勉強が苦手",3]]],
+ ["想像力",[["性格","想像力,空想,好奇心旺盛,独創的,発想力,自由奔放,夢見がち",2],["得意なこと","創作,発明,絵,作曲,物語,アイデア,演技,即興,魔術の研究",2],["職業・所属","作家,小説家,芸術家,画家,デザイナー,脚本家,魔法使い,俳優,女優",1],["休日の過ごし方","創作,絵,映画,読書,空想,魔法の実験,舞台鑑賞",1],["将来の夢","創作,発明,作品,表現",1]],[["性格","現実主義,型にはまる,融通が利かない",1]]],
+ ["運動能力",[["運動神経","良い,高い,優れ,抜群,得意,俊敏,身体能力,スポーツ万能",3],["得意なこと","運動,格闘,剣術,武術,戦闘,護衛,筋トレ,走る,ダンス",2],["学生時代の部活","陸上,サッカー,野球,バスケ,バレー,水泳,柔道,剣道,テニス,運動",1]],[["運動神経","悪い,低い,苦手,鈍い,運動音痴",3],["苦手なこと","運動,走る,スポーツ",1]]],
+ ["魅力",[["容姿の良さ","美形,美人,美しい,整って,魅力,可愛い,かわいい,端正,綺麗,かっこいい",2],["性格","カリスマ,愛嬌,気さく,ユーモア,思いやり,優しい,誠実",1],["得意なこと","人を惹きつけ,演技,歌,話術,交渉,接客",1],["他人との接し方","礼儀,親身,話を聞く,気配り,笑顔",1]],[["性格","傲慢,横柄,無神経",1]]],
+ ["自己肯定感",[["性格","自信家,自信がある,前向き,楽天的,堂々,ポジティブ,自己肯定感が高い",3],["悩み","自信がある",1],["座右の銘・大切にしている言葉","自分らしく,自分を信じる,ありのまま",1]],[["性格","自信がない,卑屈,自己嫌悪,ネガティブ,劣等感,自己肯定感が低い",3],["悩み","自信がない,自分が嫌い,劣等感,自己嫌悪,自己評価",2]]]
+];
+function characterStatus(c){
+ const scores=STATUS_AXES.map(([label,positive,negative])=>{
+  let score=45,matched=0;
+  for(const [rules,dir] of [[positive,1],[negative,-1]]){
+   for(const [field,words,weight] of rules){
+    const vals=(c.fields?.[field]||[]).join("、");
+    if(!vals)continue;
+    for(const word of words.split(","))if(vals.includes(word)){score+=dir*weight*9;matched++;break}
+   }
+  }
+  const autoValue=Math.max(0,Math.min(100,score));
+  const override=c.statusOverrides?.[label];
+  const manual=override!==undefined&&override!==null&&Number.isFinite(Number(override));
+  return {label,value:manual?Math.max(0,Math.min(100,Number(override))):autoValue,autoValue,manual,matched};
+ });
+ return scores;
+}
+function statusChartHTML(c){
+ const values=characterStatus(c),cx=148,cy=137,r=94,n=values.length;
+ const pt=(i,rad)=>{const a=-Math.PI/2+i*Math.PI*2/n;return [cx+Math.cos(a)*rad,cy+Math.sin(a)*rad]};
+ const polygon=(radii)=>radii.map((rad,i)=>pt(i,rad).map(x=>x.toFixed(1)).join(",")).join(" ");
+ const grid=[.25,.5,.75,1].map(k=>`<polygon points="${polygon(values.map(()=>r*k))}" fill="none" stroke="#69717d" stroke-opacity=".3"/>`).join("");
+ const lines=values.map((v,i)=>{const [x,y]=pt(i,r);return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#69717d" stroke-opacity=".25"/>`}).join("");
+ const labels=values.map((v,i)=>{const [x,y]=pt(i,r+25);return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="currentColor" font-size="11">${esc(v.label)}</text>`}).join("");
+ const data=polygon(values.map(v=>r*v.value/100));
+ const hasData=values.some(v=>v.matched||v.manual);
+ const ranking=[...values].sort((a,b)=>b.value-a.value);
+ return `<section class="character-status"><div class="status-head"><div><strong>キャラクターステータス</strong><div class="status-sub">設定から自動推定。各項目を手動で微調整できます</div></div><span class="status-tag">参考値</span></div>
+ <div class="status-content"><svg viewBox="0 0 296 274" role="img" aria-label="キャラクターの6項目レーダーチャート">${grid}${lines}<polygon points="${data}" fill="#8caeff" fill-opacity=".25" stroke="#a7c1ff" stroke-width="2" stroke-linejoin="round"/>${values.map((v,i)=>{const [x,y]=pt(i,r*v.value/100);return `<circle cx="${x}" cy="${y}" r="3" fill="#c4d4ff"/>`}).join("")}${labels}</svg>
+ <div class="status-detail">${values.map(v=>`<div class="status-row ${v.manual?"status-manual":""}"><label for="status-${STATUS_AXES.findIndex(a=>a[0]===v.label)}">${esc(v.label)}</label><input id="status-${STATUS_AXES.findIndex(a=>a[0]===v.label)}" type="range" min="0" max="100" step="1" value="${v.value}" data-status-axis="${esc(v.label)}" aria-label="${esc(v.label)}の数値を調整"><input class="status-number" type="number" min="0" max="100" step="1" value="${v.value}" data-status-number="${esc(v.label)}" aria-label="${esc(v.label)}の数値"><button class="status-auto" type="button" data-status-reset="${esc(v.label)}" title="自動推定値 ${v.autoValue} に戻す" ${v.manual?"":"disabled"}>↺</button></div>`).join("")}<div class="status-summary">${hasData?`高め：${esc(ranking[0].label)} ／ 低め：${esc(ranking[ranking.length-1].label)}`:"まだ判断材料が少ないため、すべて仮の中間値です。"}</div><div class="status-note">↺で自動推定値に戻せます。手動調整した数値はプロフィール変更後も維持されます。</div></div></div></section>`;
+}
+function refreshCharacterStatus(){
+ const el=document.querySelector(".character-status");
+ if(!el)return;
+ const c=getCurrent();if(!c)return;
+ const holder=document.createElement("div");holder.innerHTML=statusChartHTML(c);
+ el.replaceWith(holder.firstElementChild);
+}
+
+function setManualStatus(axis,raw){
+ const c=getCurrent();if(!c||c.locked)return;
+ const n=Number(raw);if(!Number.isFinite(n))return;
+ c.statusOverrides=c.statusOverrides||{};
+ c.statusOverrides[axis]=Math.max(0,Math.min(100,Math.round(n)));
+ save();
+}
+document.addEventListener("change",e=>{
+ const axis=e.target?.dataset?.statusAxis||e.target?.dataset?.statusNumber;
+ if(axis)setManualStatus(axis,e.target.value);
+});
+document.addEventListener("click",e=>{
+ const b=e.target.closest?.("[data-status-reset]");
+ if(!b)return;
+ const c=getCurrent();if(!c||c.locked)return;
+ if(c.statusOverrides)delete c.statusOverrides[b.dataset.statusReset];
+ save();
+});
 function renderEditor(){
  const __bodyCurrent=getCurrent(); if(__bodyCurrent)ensureBodyFields(__bodyCurrent);
  const c=getCurrent(); if(!c){$("#editor").innerHTML='<div class="empty">「＋ 新規キャラ」からキャラクターを作成できます。</div>';updatePersistentUI();return}
  $("#editor").innerHTML=`
  ${profileHeaderHTML(c)}
-
+ ${statusChartHTML(c)}
  <div class="field-groups">${FIELD_GROUPS.map(group=>`
    <section class="field-group">
      <div class="group-heading">
@@ -1176,18 +1266,28 @@ $("#newBtn").onclick=newChar;
 
 // v48: archetype presets. Only fields listed here are affected.
 const CHARACTER_TEMPLATES=[
- {name:"不良",desc:"反骨精神が強く、口は悪いが仲間には義理堅い",fields:{"性格":["反骨精神が強い","口が悪い","義理堅い"],"運動神経":["喧嘩慣れしている"],"頭の良さ":["学力は低いが地頭がいい"],"他人との接し方":["強い人には反抗する","弱い人には優しい"],"怒りの急所":["仲間を馬鹿にされること"],"嫌いなタイプ":["弱い者いじめをする"]}},
- {name:"優等生",desc:"真面目で勤勉。期待に応えようと無理をしがち",fields:{"性格":["真面目","勤勉","責任感が強い","完璧主義"],"頭の良さ":["秀才","勉強が得意"],"得意な科目":["全教科"],"他人との接し方":["敬語を崩さない"],"悩み":["周囲の期待に応えようと無理をすること"]}},
- {name:"お調子者",desc:"場を明るくするが、調子に乗って失敗することも",fields:{"性格":["お調子者","陽気","ひょうきん","おしゃべり"],"頭の良さ":["機転が利く"],"他人との接し方":["冗談やいじりで距離を縮める","場を盛り上げようとする"],"休日の過ごし方":["友人と遊ぶ"],"好きなタイプ":["ユーモアがある"]}},
- {name:"頑固",desc:"自分の信念を曲げない。不器用だが筋は通す",fields:{"性格":["頑固","意地っ張り","負けず嫌い","義理堅い"],"他人との接し方":["思ったことをすぐ口にする","誰にでも同じ態度"],"嫌いなタイプ":["口だけ"],"喧嘩した時の反応":["自分からは謝らない"]}},
- {name:"クール",desc:"感情を表に出さず、観察してから行動する",fields:{"性格":["冷静","慎重","感情を表に出さない"],"頭の良さ":["観察力が高い","論理的思考が得意"],"他人との接し方":["一定の距離を取る","沈黙が平気"],"好きな場所":["静かな場所"]}},
- {name:"天然",desc:"素直でマイペース。独特な発想で周囲を驚かせる",fields:{"性格":["天然","マイペース","純粋","好奇心旺盛"],"頭の良さ":["発想力がある"],"他人との接し方":["人を信用しやすい"],"好きなタイプ":["優しい"]}},
- {name:"ツンデレ",desc:"素直になれず、親しい相手ほどつい突き放す",fields:{"性格":["照れ屋","意地っ張り","不器用","面倒見がいい"],"他人との接し方":["好きな人には素っ気ない","わざと突き放す"],"悩み":["本音を素直に伝えられないこと"]}},
- {name:"臆病",desc:"慎重で傷つきやすいが、大切な人のためなら勇気を出す",fields:{"性格":["臆病","心配性","繊細","優しい"],"他人との接し方":["慣れるまで無口","信用するまで時間がかかる"],"苦手な場所":["注目を浴びる場所"],"頭の良さ":["観察力が高い"]}},
- {name:"熱血",desc:"一直線で行動派。困っている人を放っておけない",fields:{"性格":["行動的","正義感が強い","情に厚い","負けず嫌い"],"運動神経":["運動全般が得意"],"他人との接し方":["自分から話しかける","励ます"],"嫌いなタイプ":["弱い者いじめをする"]}},
- {name:"腹黒",desc:"表向きは穏やかでも、内心では計算している",fields:{"性格":["計算高い","秘密主義","合理的"],"頭の良さ":["先読みが得意","察しがいい"],"他人との接し方":["相手に合わせる","相手を試す"],"嫌いなタイプ":["口だけ"]}},
- {name:"世話焼き",desc:"人の面倒を見ずにはいられない、頼れる存在",fields:{"性格":["世話焼き","面倒見がいい","責任感が強い"],"他人との接し方":["世話を焼く","励ます","頼られるのは好きだが頼るのは苦手"],"休日の過ごし方":["料理"],"好きなタイプ":["素直"]}},
- {name:"皮肉屋",desc:"鋭い観察眼と辛口の冗談で人を煙に巻く",fields:{"性格":["皮肉屋","毒舌","冷静"],"頭の良さ":["観察力が高い","機転が利く"],"他人との接し方":["皮肉を言う","一定の距離を取る"],"嫌いなタイプ":["自慢ばかりする"]}}
+ {"name":"不良","desc":"反骨精神が強く、口は悪いが仲間には義理堅い","fields":{"性格":["反骨精神が強い"],"職業・所属":["学生・不良グループ"],"運動神経":["喧嘩慣れしている"],"頭の良さ":["機転が利く"],"得意なこと":["仲間を守ること"],"苦手なこと":["細かい規則を守ること"],"怒りの急所":["仲間を馬鹿にされること"],"他人との接し方":["強い人には反抗する"],"嫌いなタイプ":["弱い者いじめをする"],"喧嘩した時の反応":["自分からは謝らない"]}},
+ {"name":"優等生","desc":"真面目で勤勉。期待に応えようと無理をしがち","fields":{"性格":["真面目"],"職業・所属":["学生・学級委員"],"得意なこと":["勉強が得意"],"頭の良さ":["秀才"],"得意な科目":["全教科"],"将来の夢":["計画を立てること"],"悩み":["周囲の期待に応えようと無理をすること"],"他人との接し方":["敬語を崩さない"],"好きなタイプ":["誠実な人"],"嫌いなタイプ":["約束を守らない人"]}},
+ {"name":"お調子者","desc":"場を明るくするが、調子に乗って失敗することも","fields":{"性格":["陽気"],"職業・所属":["イベントスタッフ"],"頭の良さ":["機転が利く"],"得意なこと":["人を笑わせること"],"苦手なこと":["空気を読むこと"],"休日の過ごし方":["友人と遊ぶ"],"他人との接し方":["冗談やいじりで距離を縮める"],"好きなタイプ":["ユーモアがある人"],"嫌いなタイプ":["冗談が通じない人"],"悩み":["調子に乗って失敗すること"]}},
+ {"name":"頑固","desc":"自分の信念を曲げない。不器用だが筋は通す","fields":{"性格":["頑固"],"職業・所属":["職人"],"得意なこと":["一度決めたことをやり抜く"],"苦手なこと":["人に頼ること"],"怒りの急所":["自分の信念を曲げること"],"癖・仕草":["腕を組む"],"他人との接し方":["思ったことをすぐ口にする"],"嫌いなタイプ":["口だけの人"],"喧嘩した時の反応":["自分からは謝らない"],"座右の銘・大切にしている言葉":["筋を通す"]}},
+ {"name":"クール","desc":"感情を表に出さず、観察してから行動する","fields":{"性格":["冷静"],"職業・所属":["研究者"],"頭の良さ":["観察力が高い"],"得意なこと":["情報を整理すること"],"苦手なこと":["感情を言葉にすること"],"休日の過ごし方":["静かな場所"],"悩み":["読書"],"他人との接し方":["一定の距離を取る"],"好きなタイプ":["落ち着いた人"],"嫌いなタイプ":["騒がしい人"]}},
+ {"name":"天然","desc":"素直でマイペース。独特な発想で周囲を驚かせる","fields":{"性格":["マイペース"],"職業・所属":["学生"],"頭の良さ":["発想力がある"],"得意なこと":["自由な発想をすること"],"苦手なこと":["段取りを組むこと"],"休日の過ごし方":["散歩"],"好きな食べ物":["甘いもの"],"他人との接し方":["人を信用しやすい"],"好きなタイプ":["優しい人"],"悩み":["空気を読めないと指摘されること"]}},
+ {"name":"ツンデレ","desc":"素直になれず、親しい相手ほどつい突き放す","fields":{"性格":["照れ屋"],"職業・所属":["学生"],"得意なこと":["人の変化に気づくこと"],"苦手なこと":["本音を伝えること"],"悩み":["本音を素直に伝えられないこと"],"癖・仕草":["目をそらす"],"他人との接し方":["好きな人には素っ気ない"],"好きなタイプ":["誠実な人"],"嫌いなタイプ":["しつこい人"],"喧嘩した時の反応":["照れ隠しで強がる"]}},
+ {"name":"臆病","desc":"慎重で傷つきやすいが、大切な人のためなら勇気を出す","fields":{"性格":["心配性"],"職業・所属":["事務職"],"頭の良さ":["観察力が高い"],"得意なこと":["危険を察知すること"],"苦手なこと":["人前で話すこと"],"好きな場所":["静かな場所"],"苦手な場所":["注目を浴びる場所"],"他人との接し方":["慣れるまで無口"],"好きなタイプ":["優しい人"],"嫌いなタイプ":["強く怒鳴る人"]}},
+ {"name":"熱血","desc":"一直線で行動派。困っている人を放っておけない","fields":{"性格":["正義感が強い"],"職業・所属":["消防士"],"運動神経":["運動全般が得意"],"得意なこと":["人を励ますこと"],"苦手なこと":["じっと待つこと"],"休日の過ごし方":["筋トレ"],"悩み":["困っている人を見過ごせないこと"],"他人との接し方":["自分から話しかける"],"好きなタイプ":["努力する人"],"嫌いなタイプ":["弱い者いじめをする人"]}},
+ {"name":"腹黒","desc":"表向きは穏やかでも、内心では計算している","fields":{"性格":["計算高い"],"職業・所属":["交渉人"],"頭の良さ":["先読みが得意"],"得意なこと":["相手の本音を探ること"],"苦手なこと":["本心をさらけ出すこと"],"よく読む書籍":["心理学の本"],"損得勘定":["損をしない選択を優先する"],"他人との接し方":["相手に合わせる"],"好きなタイプ":["利用価値のある人"],"嫌いなタイプ":["計画を邪魔する人"]}},
+ {"name":"世話焼き","desc":"人の面倒を見ずにはいられない、頼れる存在","fields":{"性格":["面倒見がいい"],"職業・所属":["看護師"],"得意なこと":["人の変化に気づくこと"],"休日の過ごし方":["料理"],"苦手なこと":["人に頼ること"],"好きな食べ物":["家庭料理"],"悩み":["頼られすぎて疲れること"],"他人との接し方":["世話を焼く"],"好きなタイプ":["素直な人"],"嫌いなタイプ":["無責任な人"]}},
+ {"name":"皮肉屋","desc":"鋭い観察眼と辛口の冗談で人を煙に巻く","fields":{"性格":["皮肉屋"],"職業・所属":["評論家"],"頭の良さ":["観察力が高い"],"得意なこと":["言葉で切り返すこと"],"苦手なこと":["素直に褒めること"],"よく読む書籍":["小説"],"他人との接し方":["皮肉を言う"],"好きなタイプ":["知的な人"],"嫌いなタイプ":["自慢ばかりする人"],"座右の銘・大切にしている言葉":["言葉は刃にもなる"]}},
+ {"name":"お嬢様","desc":"育ちの良さと品格を持ち、世間知らずな一面も","fields":{"性格":["礼儀正しい"],"職業・所属":["名家の令嬢"],"得意な科目":["語学"],"得意なこと":["社交ダンス"],"苦手なこと":["庶民的な暮らしに慣れること"],"好きな食べ物":["紅茶"],"好きな場所":["美術館"],"他人との接し方":["丁寧な言葉遣いをする"],"好きなタイプ":["礼儀正しい人"],"嫌いなタイプ":["無礼な人"]}},
+ {"name":"殺し屋","desc":"冷静沈着で秘密主義。仕事と感情の間で揺れる","fields":{"性格":["冷静"],"職業・所属":["殺し屋"],"運動神経":["反射神経がいい"],"得意なこと":["気配を消すこと"],"苦手なこと":["人を信じること"],"好きな場所":["静かな場所"],"悩み":["素性を知られること"],"他人との接し方":["必要以上に親しくならない"],"好きなタイプ":["約束を守る人"],"嫌いなタイプ":["裏切る人"]}},
+ {"name": "騎士", "desc": "忠誠心と誇りを持ち、弱い者を守ろうとする", "fields": {"性格": ["責任感が強い"], "職業・所属": ["王国騎士団"], "運動神経": ["剣術に長けている"], "得意なこと": ["護衛と剣術"], "苦手なこと": ["嘘をつくこと"], "怒りの急所": ["守るべき人を傷つけられること"], "好きな場所": ["訓練場"], "他人との接し方": ["礼節を重んじる"], "好きなタイプ": ["誠実な人"], "座右の銘・大切にしている言葉": ["誓いを守る"]}},
+ {"name": "魔法使い", "desc": "知識と探究心にあふれた魔術の使い手", "fields": {"性格": ["好奇心旺盛"], "職業・所属": ["魔法使い"], "頭の良さ": ["知識が豊富"], "得意なこと": ["魔術の研究"], "苦手なこと": ["肉体労働"], "よく読む書籍": ["魔導書"], "好きな場所": ["図書館"], "休日の過ごし方": ["魔法の実験"], "悩み": ["禁じられた知識への誘惑"], "他人との接し方": ["興味のある話題では饒舌になる"]}},
+ {"name": "王族", "desc": "立場と責任を背負いながら生きる人物", "fields": {"性格": ["気品がある"], "職業・所属": ["王族"], "得意なこと": ["外交と交渉"], "苦手なこと": ["自由に外出すること"], "好きな場所": ["庭園"], "悩み": ["個人の望みと国への責任の板挟み"], "他人との接し方": ["公の場では礼儀正しく接する"], "好きなタイプ": ["本音で話してくれる人"], "嫌いなタイプ": ["権力に媚びる人"], "座右の銘・大切にしている言葉": ["民を守る責任"]}},
+ {"name": "探偵", "desc": "些細な違和感も見逃さない観察の達人", "fields": {"性格": ["疑り深い"], "職業・所属": ["探偵"], "頭の良さ": ["推理力が高い"], "得意なこと": ["聞き込みと推理"], "苦手なこと": ["先入観を捨てること"], "よく読む書籍": ["事件記録"], "癖・仕草": ["考え込むと顎に手を当てる"], "好きな場所": ["静かな喫茶店"], "他人との接し方": ["相手の言葉を注意深く聞く"], "悩み": ["解決できなかった事件"]}},
+ {"name": "怪物", "desc": "人間とは異なる存在。恐れられながらも心を持つ", "fields": {"性格": ["警戒心が強い"], "職業・所属": ["人里離れた場所に暮らす怪物"], "得意なこと": ["暗闇で行動すること"], "苦手なこと": ["人間の習慣を理解すること"], "好きな場所": ["人の来ない森"], "苦手な場所": ["人混み"], "悩み": ["外見だけで恐れられること"], "怒りの急所": ["仲間を傷つけられること"], "他人との接し方": ["最初は距離を置く"], "好きなタイプ": ["偏見を持たない人"]}},
+ {"name": "先生", "desc": "生徒の成長を支え、時には厳しく導く", "fields": {"性格": ["面倒見がいい"], "職業・所属": ["教師"], "得意なこと": ["わかりやすく説明すること"], "苦手なこと": ["生徒を見捨てること"], "得意な科目": ["国語"], "休日の過ごし方": ["教材研究"], "悩み": ["生徒一人ひとりに向き合う時間が足りないこと"], "怒りの急所": ["いじめを見過ごすこと"], "他人との接し方": ["相手の話を最後まで聞く"], "座右の銘・大切にしている言葉": ["失敗は学びの一歩"]}},
+ {"name": "俳優", "desc": "舞台や映像で役を生きる男性俳優のイメージ", "fields": {"性格": ["努力家"], "職業・所属": ["俳優"], "得意なこと": ["役になりきること"], "苦手なこと": ["素の自分を見せること"], "よく読む書籍": ["戯曲"], "休日の過ごし方": ["映画鑑賞"], "癖・仕草": ["人の仕草を観察する"], "悩み": ["役の評価と自分の価値を混同すること"], "好きな場所": ["劇場"], "将来の夢": ["主演作品を持つこと"]}},
+ {"name": "女優", "desc": "舞台や映像で役を生きる女性俳優のイメージ", "fields": {"性格": ["表現力が豊か"], "職業・所属": ["女優"], "得意なこと": ["感情を表現すること"], "苦手なこと": ["周囲の期待を気にしすぎること"], "よく読む書籍": ["戯曲"], "休日の過ごし方": ["舞台鑑賞"], "癖・仕草": ["会話中に相手の表情を観察する"], "悩み": ["役柄のイメージで見られること"], "好きな場所": ["稽古場"], "将来の夢": ["長く演じ続けること"]}}
 ];
 function openTemplateModal(){
  const c=getCurrent();if(!c){toast("先にキャラクターを作成してください");return}
@@ -1201,7 +1301,7 @@ function applyCharacterTemplate(index){
  const mode=document.querySelector('input[name="templateMode"]:checked')?.value||"empty";
  const changes=Object.entries(t.fields).filter(([cat])=>CATS.includes(cat)&&(mode==="replace"||!(c.fields[cat]||[]).length));
  if(!changes.length){toast("対象の項目はすべて設定済みです");return}
- if(!confirm(`「${t.name}」テンプレートを適用しますか？\n${mode==="replace"?"対象項目の既存設定を上書きします。":"未設定の項目だけ埋めます。"}\n変更対象：${changes.length}項目`))return;
+ if(!confirm(`「${t.name}」テンプレートを適用しますか？\n${mode==="replace"?"対象項目の既存設定を上書きします。":"未設定の項目だけ埋めます。"}\n変更対象：${changes.length}項目（テンプレート全${Object.keys(t.fields).length}項目）`))return;
  changes.forEach(([cat,values])=>{c.fields[cat]=values.slice();values.forEach(v=>{if(!allOptions(cat).includes(v)){custom[cat]=custom[cat]||[];custom[cat].push(v)}})});
  save();renderEditor();renderList();$("#templateModal").classList.remove("show");toast(`「${t.name}」を適用しました`);
 }

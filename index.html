@@ -495,7 +495,7 @@ body.drawer-open .drawer-shade{display:block}
  <div class="cloud-panel" id="cloudPanel"><strong>☁ クラウド同期</strong><p id="cloudAccount">接続準備中…</p>
  <div id="cloudLogin"><input id="cloudEmail" type="email" placeholder="メールアドレス" autocomplete="username"><input id="cloudPassword" type="password" placeholder="パスワード" autocomplete="current-password"><button class="btn primary" id="cloudSignIn">ログイン</button></div>
  <div id="cloudControls" hidden><div class="cloud-actions"><button class="btn primary" id="cloudUpload">この端末 → クラウド</button><button class="btn" id="cloudDownload">クラウド → この端末</button></div><div class="cloud-actions"><button class="btn" id="cloudAutoToggle">自動同期：OFF</button><button class="btn" id="cloudSignOut">ログアウト</button></div></div>
- <p class="cloud-status" id="cloudStatus">初回はJSONバックアップを保存し、同期する方向を選んでください。</p></div>
+ <p class="cloud-status" id="cloudStatus">初回はJSONバックアップを保存し、同期する方向を選んでください。画像は非公開Storageに保存します。</p></div>
  <div class="drawer-actions"><button class="btn" id="exportBtn">バックアップ</button><button class="btn" id="importBtn">復元</button></div>
  <input type="file" id="importFile" accept=".json" hidden>
 </nav>
@@ -1374,7 +1374,7 @@ $("#modalWrap").addEventListener("mousedown",e=>{
 $("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({version:1,characters:chars,customOptions:custom},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="character-maker-backup.json";a.click();URL.revokeObjectURL(a.href)};
 $("#importBtn").onclick=()=>$("#importFile").click(); $("#importFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.characters))throw 0;chars=d.characters;custom=d.customOptions||{};current=chars[0]?.id||null;save();renderList();renderEditor();toast("バックアップを復元しました")}catch{alert("バックアップファイルを読み込めませんでした。")}e.target.value=""};
 
-// v56: explicit, guarded cloud synchronization. Images remain embedded in the JSON snapshot.
+// v57: cloud synchronization with private Supabase Storage portraits.
 const CLOUD_URL="https://ldyszfnuqhlmruprzqcv.supabase.co";
 const CLOUD_KEY="sb_publishable_trsAYpb_jxFXhN1UDauIXA_7xLYzfTX";
 let cloudClient=null,cloudUser=null,cloudAuto=false,cloudBusy=false,cloudTimer=null,cloudReady=false;
@@ -1385,7 +1385,38 @@ function cloudUI(){
  document.getElementById("cloudAccount").textContent=cloudUser?`ログイン中：${cloudUser.email}`:"ログインするとPC・スマホで共有できます";
  document.getElementById("cloudAutoToggle").textContent=`自動同期：${cloudAuto?"ON":"OFF"}`;
 }
-function cloudSnapshot(){return {version:1,characters:chars,customOptions:custom,updatedBy:"character-maker-v56"}}
+// Keep full image data locally; only replace image data with a private Storage path in cloud JSON.
+async function cloudSnapshot(){
+ const snapshot=JSON.parse(JSON.stringify({version:2,characters:chars,customOptions:custom,updatedBy:"character-maker-v57"}));
+ for(const c of snapshot.characters){
+  if(!c.portrait?.data)continue;
+  const match=/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(c.portrait.data);
+  if(!match)throw Error("画像形式が不正です。JPEG・PNG・WebP画像を再登録してください。");
+  const mime=match[1].toLowerCase(),binary=atob(match[2]);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  if(bytes.byteLength>5*1024*1024)throw Error("5MBを超える画像があります。画像を再登録してください。");
+  const extension=mime==="image/png"?"png":mime==="image/webp"?"webp":"jpg";
+  const path=`${cloudUser.id}/${String(c.id).replace(/[^a-zA-Z0-9_-]/g,"_")}/portrait.${extension}`;
+  const {error}=await cloudClient.storage.from("character-images").upload(path,new Blob([bytes],{type:mime}),{contentType:mime,upsert:true,cacheControl:"0"});
+  if(error)throw Error(`画像アップロード失敗（${c.name||"名称未設定"}）：${error.message}`);
+  c.portrait.storagePath=path;
+  delete c.portrait.data;
+ }
+ return snapshot;
+}
+async function hydrateCloudPortraits(characters){
+ const hydrated=JSON.parse(JSON.stringify(characters));
+ for(const c of hydrated){
+  if(!c.portrait?.storagePath||c.portrait.data)continue;
+  const path=c.portrait.storagePath;
+  if(!path.startsWith(`${cloudUser.id}/`))throw Error("画像の保存先がログインユーザーと一致しません。");
+  const {data,error}=await cloudClient.storage.from("character-images").download(path);
+  if(error)throw Error(`画像読み込み失敗（${c.name||"名称未設定"}）：${error.message}`);
+  c.portrait.data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error("画像の変換に失敗しました"));reader.readAsDataURL(data)});
+ }
+ return hydrated;
+}
 async function cloudRow(){
  const {data,error}=await cloudClient.from("characters").select("id,character_data,updated_at").eq("user_id",cloudUser.id).order("updated_at",{ascending:false}).limit(1);
  if(error)throw error;return data?.[0]||null;
@@ -1394,8 +1425,8 @@ async function cloudPush(silent=false){
  if(!cloudUser||cloudBusy)return;
  cloudBusy=true;cloudStatus("クラウドに保存しています…");
  try{
-  const payload=cloudSnapshot();const size=new Blob([JSON.stringify(payload)]).size;
-  if(size>4*1024*1024)throw Error("データが4MBを超えています。画像のクラウド分離が必要なため、保存を中止しました。");
+  const payload=await cloudSnapshot();const size=new Blob([JSON.stringify(payload)]).size;
+  if(size>4*1024*1024)throw Error("キャラクター設定データが4MBを超えています。保存を中止しました。");
   const row=await cloudRow();
   let result;
   if(row)result=await cloudClient.from("characters").update({character_data:payload,updated_at:new Date().toISOString()}).eq("id",row.id).eq("user_id",cloudUser.id);
@@ -1416,7 +1447,9 @@ async function cloudPull(){
    cloudStatus("読み込みをキャンセルしました。端末データは変更していません。");return;
   }
   cloudAuto=false;cloudReady=false;cloudUI();
-  chars=data.characters;custom=data.customOptions||{};current=chars[0]?.id||null;
+  const loaded=await hydrateCloudPortraits(data.characters);
+  // Do not overwrite local data until every portrait has downloaded successfully.
+  chars=loaded;custom=data.customOptions||{};current=chars[0]?.id||null;
   localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom));
   renderList();renderEditor();cloudReady=true;cloudStatus(`読み込み完了：${chars.length}体。必要なら自動同期をONにしてください。`);
  }catch(e){cloudStatus("読み込み失敗："+(e.message||e))}

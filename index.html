@@ -424,6 +424,15 @@ body.drawer-open .drawer-shade{display:block}
 }
 /* v47: fit the full uploaded portrait inside the frame before manual cropping */
 .portrait-frame img{object-fit:contain!important}
+
+/* v48: archetype preset chooser */
+.template-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:45vh;overflow-y:auto;margin:14px 0}
+.template-choice{text-align:left;background:#292d34;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:5px}
+.template-choice:hover,.template-choice:focus-visible{border-color:#a1a9b4;background:#363b44}
+.template-choice strong{font-size:14px}.template-choice small{color:var(--muted);line-height:1.5;font-size:12px}
+.template-apply-options{display:grid;gap:9px;padding:12px;background:#242830;border:1px solid var(--line);border-radius:9px;font-size:13px}
+.template-apply-options label{display:flex;align-items:center;gap:8px;cursor:pointer}
+@media(max-width:500px){.template-choices{grid-template-columns:1fr;max-height:43vh}}
 </style>
 </head>
 <body>
@@ -438,7 +447,7 @@ body.drawer-open .drawer-shade{display:block}
  <input class="search" id="charSearch" placeholder="キャラクターを検索" aria-label="キャラクターを検索">
  <div id="charList" class="drawer-char-list"></div>
  <div class="drawer-separator"></div>
- <div class="drawer-actions"><button class="btn" id="oppositeBtn">⇄ 対極キャラを作成</button><button class="btn" id="clearAllBtn">すべてクリア</button><button class="btn" id="randomAllBtn">🎲 すべてランダム</button></div>
+ <div class="drawer-actions"><button class="btn" id="oppositeBtn">⇄ 対極キャラを作成</button><button class="btn" id="clearAllBtn">すべてクリア</button><button class="btn" id="randomAllBtn">🎲 すべてランダム</button><button class="btn primary" id="templateBtn">🎭 キャラテンプレート</button></div>
  <div class="drawer-separator"></div>
  <div class="drawer-actions"><button class="btn" id="exportBtn">バックアップ</button><button class="btn" id="importBtn">復元</button></div>
  <input type="file" id="importFile" accept=".json" hidden>
@@ -468,6 +477,13 @@ body.drawer-open .drawer-shade{display:block}
 <div class="footer-actions"><button class="btn" id="modalClose">閉じる</button></div>
 </div></div>
 
+<div class="modal-wrap" id="templateModal"><div class="modal" style="width:min(580px,100%)">
+<h2>🎭 キャラクターテンプレート</h2>
+<p style="color:var(--muted);font-size:13px;line-height:1.7">人物像を選ぶと、性格・能力・対人関係などをまとめて設定します。名前・性別・年齢・誕生日・画像は変更しません。</p>
+<div id="templateChoices" class="template-choices"></div>
+<div class="template-apply-options"><label><input type="radio" name="templateMode" value="empty" checked> 未設定の項目だけ埋める（おすすめ）</label><label><input type="radio" name="templateMode" value="replace"> テンプレート対象の項目を上書きする</label></div>
+<div class="footer-actions"><button class="btn" id="templateClose">キャンセル</button></div>
+</div></div>
 <div class="modal-wrap" id="oppositeModal"><div class="modal" style="width:min(430px,100%)">
 <h2>対極キャラを作成</h2>
 <p style="color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 14px">
@@ -1157,6 +1173,39 @@ function renderOptions(){
 }
 function addCustom(){const v=$("#customInput").value.trim();if(!v)return;if(!custom[activeCat])custom[activeCat]=[];if(!allOptions(activeCat).includes(v))custom[activeCat].push(v);const c=getCurrent();if(!c.fields[activeCat].includes(v))c.fields[activeCat].push(v);$("#customInput").value="";save();renderOptions();renderEditor()}
 $("#newBtn").onclick=newChar;
+
+// v48: archetype presets. Only fields listed here are affected.
+const CHARACTER_TEMPLATES=[
+ {name:"不良",desc:"反骨精神が強く、口は悪いが仲間には義理堅い",fields:{"性格":["反骨精神が強い","口が悪い","義理堅い"],"運動神経":["喧嘩慣れしている"],"頭の良さ":["学力は低いが地頭がいい"],"他人との接し方":["強い人には反抗する","弱い人には優しい"],"怒りの急所":["仲間を馬鹿にされること"],"嫌いなタイプ":["弱い者いじめをする"]}},
+ {name:"優等生",desc:"真面目で勤勉。期待に応えようと無理をしがち",fields:{"性格":["真面目","勤勉","責任感が強い","完璧主義"],"頭の良さ":["秀才","勉強が得意"],"得意な科目":["全教科"],"他人との接し方":["敬語を崩さない"],"悩み":["周囲の期待に応えようと無理をすること"]}},
+ {name:"お調子者",desc:"場を明るくするが、調子に乗って失敗することも",fields:{"性格":["お調子者","陽気","ひょうきん","おしゃべり"],"頭の良さ":["機転が利く"],"他人との接し方":["冗談やいじりで距離を縮める","場を盛り上げようとする"],"休日の過ごし方":["友人と遊ぶ"],"好きなタイプ":["ユーモアがある"]}},
+ {name:"頑固",desc:"自分の信念を曲げない。不器用だが筋は通す",fields:{"性格":["頑固","意地っ張り","負けず嫌い","義理堅い"],"他人との接し方":["思ったことをすぐ口にする","誰にでも同じ態度"],"嫌いなタイプ":["口だけ"],"喧嘩した時の反応":["自分からは謝らない"]}},
+ {name:"クール",desc:"感情を表に出さず、観察してから行動する",fields:{"性格":["冷静","慎重","感情を表に出さない"],"頭の良さ":["観察力が高い","論理的思考が得意"],"他人との接し方":["一定の距離を取る","沈黙が平気"],"好きな場所":["静かな場所"]}},
+ {name:"天然",desc:"素直でマイペース。独特な発想で周囲を驚かせる",fields:{"性格":["天然","マイペース","純粋","好奇心旺盛"],"頭の良さ":["発想力がある"],"他人との接し方":["人を信用しやすい"],"好きなタイプ":["優しい"]}},
+ {name:"ツンデレ",desc:"素直になれず、親しい相手ほどつい突き放す",fields:{"性格":["照れ屋","意地っ張り","不器用","面倒見がいい"],"他人との接し方":["好きな人には素っ気ない","わざと突き放す"],"悩み":["本音を素直に伝えられないこと"]}},
+ {name:"臆病",desc:"慎重で傷つきやすいが、大切な人のためなら勇気を出す",fields:{"性格":["臆病","心配性","繊細","優しい"],"他人との接し方":["慣れるまで無口","信用するまで時間がかかる"],"苦手な場所":["注目を浴びる場所"],"頭の良さ":["観察力が高い"]}},
+ {name:"熱血",desc:"一直線で行動派。困っている人を放っておけない",fields:{"性格":["行動的","正義感が強い","情に厚い","負けず嫌い"],"運動神経":["運動全般が得意"],"他人との接し方":["自分から話しかける","励ます"],"嫌いなタイプ":["弱い者いじめをする"]}},
+ {name:"腹黒",desc:"表向きは穏やかでも、内心では計算している",fields:{"性格":["計算高い","秘密主義","合理的"],"頭の良さ":["先読みが得意","察しがいい"],"他人との接し方":["相手に合わせる","相手を試す"],"嫌いなタイプ":["口だけ"]}},
+ {name:"世話焼き",desc:"人の面倒を見ずにはいられない、頼れる存在",fields:{"性格":["世話焼き","面倒見がいい","責任感が強い"],"他人との接し方":["世話を焼く","励ます","頼られるのは好きだが頼るのは苦手"],"休日の過ごし方":["料理"],"好きなタイプ":["素直"]}},
+ {name:"皮肉屋",desc:"鋭い観察眼と辛口の冗談で人を煙に巻く",fields:{"性格":["皮肉屋","毒舌","冷静"],"頭の良さ":["観察力が高い","機転が利く"],"他人との接し方":["皮肉を言う","一定の距離を取る"],"嫌いなタイプ":["自慢ばかりする"]}}
+];
+function openTemplateModal(){
+ const c=getCurrent();if(!c){toast("先にキャラクターを作成してください");return}
+ if(c.locked){alert("ロック中のキャラクターにはテンプレートを適用できません。先にロックを解除してください。");return}
+ $("#templateChoices").innerHTML=CHARACTER_TEMPLATES.map((t,i)=>`<button type="button" class="template-choice" data-template="${i}"><strong>${esc(t.name)}</strong><small>${esc(t.desc)}</small></button>`).join("");
+ $("#templateChoices").querySelectorAll("[data-template]").forEach(b=>b.onclick=()=>applyCharacterTemplate(Number(b.dataset.template)));
+ $("#templateModal").classList.add("show");closeToolDrawer();
+}
+function applyCharacterTemplate(index){
+ const c=getCurrent(),t=CHARACTER_TEMPLATES[index];if(!c||!t||c.locked)return;
+ const mode=document.querySelector('input[name="templateMode"]:checked')?.value||"empty";
+ const changes=Object.entries(t.fields).filter(([cat])=>CATS.includes(cat)&&(mode==="replace"||!(c.fields[cat]||[]).length));
+ if(!changes.length){toast("対象の項目はすべて設定済みです");return}
+ if(!confirm(`「${t.name}」テンプレートを適用しますか？\n${mode==="replace"?"対象項目の既存設定を上書きします。":"未設定の項目だけ埋めます。"}\n変更対象：${changes.length}項目`))return;
+ changes.forEach(([cat,values])=>{c.fields[cat]=values.slice();values.forEach(v=>{if(!allOptions(cat).includes(v)){custom[cat]=custom[cat]||[];custom[cat].push(v)}})});
+ save();renderEditor();renderList();$("#templateModal").classList.remove("show");toast(`「${t.name}」を適用しました`);
+}
+
 function openToolDrawer(){document.body.classList.add("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","true");}
 function closeToolDrawer(){document.body.classList.remove("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","false")}
 $("#drawerToggle").onclick=()=>document.body.classList.contains("drawer-open")?closeToolDrawer():openToolDrawer();
@@ -1167,6 +1216,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeToolDrawer()});
 $("#oppositeBtn").onclick=()=>{if(getCurrent())$("#oppositeModal").classList.add("show")};
 $("#clearAllBtn").onclick=()=>{if(getCurrent())clearAll()};
 $("#randomAllBtn").onclick=()=>{if(getCurrent())randomAll()};
+$("#templateBtn").onclick=openTemplateModal;
+$("#templateClose").onclick=()=>$("#templateModal").classList.remove("show");
+$("#templateModal").addEventListener("mousedown",e=>{if(e.target.id==="templateModal")e.currentTarget.classList.remove("show")});
 $("#headerSaveBtn").onclick=()=>{if(getCurrent()){save();toast("保存しました")}};
 $("#headerLockBtn").onclick=toggleLock;
 $("#headerDeleteBtn").onclick=deleteCurrent;

@@ -778,7 +778,7 @@ function profileHeaderHTML(c){
  </details>
  <div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>
  <div class="portrait-section"><div class="portrait-frame" id="portraitFrame" title="画像をドラッグして位置を調整。⚙から拡大・縮小できます">
- ${c.portrait?.data?`<img id="portraitImg" draggable="false" src="${c.portrait.data}" style="transform:translate(${Number(c.portrait.x)||0}px,${Number(c.portrait.y)||0}px) scale(${Number(c.portrait.zoom)||1})">`:`<span>画像を追加<br>＋</span>`}
+ ${c.portrait?.data?`<img id="portraitImg" draggable="false" src="${c.portrait.data}" style="transform:scale(${Number(c.portrait.zoom)||1})">`:`<span>画像を追加<br>＋</span>`}
  </div><input type="file" id="portraitFile" accept="image/*" hidden>
  <div class="portrait-toolbar"><button class="btn portrait-upload" id="portraitChoose" title="画像を選ぶ・変更する" aria-label="画像を選ぶ・変更する">▣</button>
  <button class="btn" id="portraitEditToggle" title="画像のサイズ・位置を調整" aria-label="画像の調整を開く" ${c.portrait?.data?"":"disabled"}>⚙</button>
@@ -813,14 +813,18 @@ function setupPortrait(c){
  };
  if(!c.portrait?.data)return;
  const img=$("#portraitImg"),zoom=$("#portraitZoom");
- const paint=()=>{img.style.transform=`translate(${c.portrait.x||0}px,${c.portrait.y||0}px) scale(${c.portrait.zoom||1})`};
+ // Store offsets relative to the frame size so desktop/mobile preserve the composition.
+ const portraitFrameSize=()=>({w:frame.clientWidth||112,h:frame.clientHeight||148});
+ const portraitOffsets=()=>{const f=portraitFrameSize();return {x:(Number(c.portrait.x)||0)*f.w/(Number(c.portrait.refWidth)||112),y:(Number(c.portrait.y)||0)*f.h/(Number(c.portrait.refHeight)||148)}};
+ const paint=()=>{const o=portraitOffsets();img.style.transform=`translate(${o.x}px,${o.y}px) scale(${c.portrait.zoom||1})`};
+ paint();
  zoom.oninput=e=>{c.portrait.zoom=Number(e.target.value);paint();save()};
- $("#portraitReset").onclick=()=>{c.portrait.x=0;c.portrait.y=0;c.portrait.zoom=1;zoom.value=1;paint();save()};
+ $("#portraitReset").onclick=()=>{c.portrait.x=0;c.portrait.y=0;c.portrait.refWidth=portraitFrameSize().w;c.portrait.refHeight=portraitFrameSize().h;c.portrait.zoom=1;zoom.value=1;paint();save()};
  $("#portraitEditToggle").onclick=()=>{const controls=$(".portrait-controls");controls.hidden=!controls.hidden};
  $("#portraitDelete").onclick=()=>{if(confirm("画像を削除しますか？")){delete c.portrait;save();renderEditor()}};
  let start=null;
- frame.onpointerdown=e=>{if(!c.portrait?.data)return;start={x:e.clientX,y:e.clientY,px:c.portrait.x||0,py:c.portrait.y||0};frame.setPointerCapture(e.pointerId)};
- frame.onpointermove=e=>{if(!start)return;c.portrait.x=Math.round(start.px+e.clientX-start.x);c.portrait.y=Math.round(start.py+e.clientY-start.y);paint()};
+ frame.onpointerdown=e=>{if(!c.portrait?.data)return;start={sx:e.clientX,sy:e.clientY,ox:portraitOffsets().x,oy:portraitOffsets().y,w:portraitFrameSize().w,h:portraitFrameSize().h};frame.setPointerCapture(e.pointerId)};
+ frame.onpointermove=e=>{if(!start)return;c.portrait.x=Math.round((start.ox+e.clientX-start.sx)*100)/100;c.portrait.y=Math.round((start.oy+e.clientY-start.sy)*100)/100;c.portrait.refWidth=start.w;c.portrait.refHeight=start.h;paint()};
  frame.onpointerup=()=>{if(start){start=null;save()}};
  frame.onpointercancel=()=>{start=null};
 }

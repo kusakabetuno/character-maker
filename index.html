@@ -267,14 +267,68 @@ main{max-width:1280px;margin:auto;padding:22px;display:grid;grid-template-column
  .profile-meta .head-birthday{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;width:100%}
  .profile-meta .head-birthday .profile-select{max-width:none;width:100%;min-width:0}
 }
+
+/* v40 - persistent compact rail and slide-out command drawer */
+body{padding-left:46px}
+header{position:relative;z-index:8}
+.top{padding:12px 18px}
+.tool-rail{position:fixed;left:0;top:0;bottom:0;width:46px;background:#2b2f35;border-right:1px solid var(--line);z-index:41;display:flex;align-items:flex-start}
+.rail-toggle{display:flex;align-items:center;flex-direction:column;gap:9px;width:46px;min-height:104px;padding:16px 3px;background:transparent;border:0;color:var(--text);font-size:22px}
+.rail-toggle span{font-size:11px;writing-mode:vertical-rl;letter-spacing:2px}
+.tool-drawer{position:fixed;top:0;bottom:0;left:46px;width:min(360px,calc(100vw - 46px));background:#292d32;border-right:1px solid var(--line);z-index:43;transform:translateX(calc(-100% - 48px));transition:transform .2s ease;padding:16px;overflow-y:auto;box-shadow:8px 0 30px #0005}
+body.drawer-open .tool-drawer{transform:translateX(0)}
+.drawer-shade{position:fixed;inset:0;background:#0009;z-index:42;display:none}
+body.drawer-open .drawer-shade{display:block}
+.drawer-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.drawer-label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+.drawer-actions{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.drawer-actions .btn{flex:1 1 auto;white-space:nowrap}
+.drawer-separator{border-top:1px solid var(--line);margin:17px 0}
+.drawer-char-list{display:block;max-height:230px;overflow-y:auto}
+.drawer-char-list.collapsed{display:none}
+#charList{min-height:0;flex:none}
+.profile-head{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important;margin-bottom:18px}
+.profile-name{font-size:24px;font-weight:750;line-height:1.4;padding:2px 0 9px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.profile-meta{display:flex!important;flex-wrap:wrap!important;gap:8px;width:100%}
+.profile-meta .profile-select{flex:0 1 145px!important;max-width:none!important}
+.profile-meta .head-birthday{display:flex!important;flex:0 0 auto!important;gap:7px;width:auto!important}
+.profile-meta .head-birthday .profile-select{min-width:75px}
+.editor-actions{display:none}
+@media(max-width:750px){
+ body{padding-left:38px}
+ .tool-rail,.rail-toggle{width:38px}
+ .tool-drawer{left:38px;width:min(340px,calc(100vw - 38px))}
+ .top{padding:10px 12px}
+ .top h1{font-size:16px}
+ main{display:block;padding:9px}
+ .sidebar{position:static;margin-bottom:10px}
+ .profile-name{font-size:20px}
+ .profile-meta{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}
+ .profile-meta .profile-select{max-width:none!important;width:100%;min-width:0}
+ .profile-meta .head-birthday{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr;width:100%!important}
+ .editor{padding:12px}
+}
 </style>
 </head>
 <body>
-<header><div class="top"><h1>キャラクターメーカー</h1><div class="spacer"></div><button class="btn primary" id="headerSaveBtn">保存</button><button class="btn" id="headerLockBtn">🔓 ロック</button><button class="btn danger" id="headerDeleteBtn">削除</button><button class="btn" id="exportBtn">バックアップ</button><button class="btn" id="importBtn">復元</button><input type="file" id="importFile" accept=".json" hidden></div>
-<div class="header-library">
- <div class="library-controls"><button class="btn library-toggle" id="libraryToggle" type="button" aria-expanded="false">☰ キャラクター一覧 <span id="charCount"></span> ▾</button><input class="search" id="charSearch" placeholder="キャラクターを検索" aria-label="キャラクターを検索"><button class="btn primary" id="newBtn" type="button">＋ 新規キャラ</button></div>
- <div id="charList" class="header-char-list"></div>
-</div></header>
+<header><div class="top"><h1>キャラクターメーカー</h1></div></header>
+<div class="tool-rail"><button id="drawerToggle" class="rail-toggle" aria-label="操作メニューを開く" aria-expanded="false" aria-controls="toolDrawer">☰<span>メニュー</span></button></div>
+<div id="drawerShade" class="drawer-shade"></div>
+<nav id="toolDrawer" class="tool-drawer" aria-label="キャラクター操作メニュー">
+ <div class="drawer-heading"><strong>キャラクター操作</strong><button class="btn" id="drawerClose" aria-label="閉じる">✕</button></div>
+ <label class="drawer-label" for="drawerName">キャラクター名</label>
+ <input class="search" id="drawerName" placeholder="キャラクター名を入力">
+ <div class="drawer-actions"><button class="btn primary" id="headerSaveBtn">保存</button><button class="btn" id="headerLockBtn">🔓 ロック</button><button class="btn danger" id="headerDeleteBtn">削除</button></div>
+ <div class="drawer-separator"></div>
+ <div class="drawer-actions"><button class="btn primary" id="newBtn">＋ 新規キャラ</button><button class="btn" id="libraryToggle" aria-expanded="true">キャラクター一覧 <span id="charCount"></span></button></div>
+ <input class="search" id="charSearch" placeholder="キャラクターを検索" aria-label="キャラクターを検索">
+ <div id="charList" class="drawer-char-list"></div>
+ <div class="drawer-separator"></div>
+ <div class="drawer-actions"><button class="btn" id="oppositeBtn">⇄ 対極キャラを作成</button><button class="btn" id="clearAllBtn">すべてクリア</button><button class="btn" id="randomAllBtn">🎲 すべてランダム</button></div>
+ <div class="drawer-separator"></div>
+ <div class="drawer-actions"><button class="btn" id="exportBtn">バックアップ</button><button class="btn" id="importBtn">復元</button></div>
+ <input type="file" id="importFile" accept=".json" hidden>
+</nav>
 <main>
 <aside class="sidebar">
 <div class="side-memo" id="sideMemoWrap" style="display:none">
@@ -495,11 +549,11 @@ function renderList(){
  const list=chars.filter(c=>(c.name||"名称未設定").toLowerCase().includes(q));
  const count=$("#charCount");if(count)count.textContent=`(${chars.length})`;
  $("#charList").innerHTML=list.length?list.map(c=>`<div class="char ${c.id===current?"active":""}" data-id="${c.id}"><span class="char-name">${esc(c.name||"名称未設定")}</span></div>`).join(""):`<div class="empty" style="padding:25px 5px">まだキャラクターはいません。</div>`;
- document.querySelectorAll(".char").forEach(x=>x.onclick=()=>{current=x.dataset.id;renderList();renderEditor();document.querySelector(".header-library")?.classList.remove("expanded");$("#libraryToggle")?.setAttribute("aria-expanded","false")});
+ document.querySelectorAll(".char").forEach(x=>x.onclick=()=>{current=x.dataset.id;renderList();renderEditor();closeToolDrawer()});
 }
 function newChar(){
  const c={id:uid(),name:"",notes:"",locked:false,fields:{}}; CATS.forEach(k=>c.fields[k]=[]);
- chars.unshift(c); current=c.id; save();renderList();renderEditor();setTimeout(()=>$("#nameInput")?.focus(),0)
+ chars.unshift(c); current=c.id; save();renderList();renderEditor();openToolDrawer();setTimeout(()=>$("#drawerName")?.focus(),0)
 }
 function updatePersistentUI(){
  const c=getCurrent();
@@ -538,7 +592,7 @@ function profileHeaderHTML(c){
  const months=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${m===i+1?"selected":""}>${i+1}月</option>`).join("");
  const max=m?new Date(2024,m,0).getDate():31;
  const days=Array.from({length:max},(_,i)=>`<option value="${i+1}" ${d===i+1?"selected":""}>${i+1}日</option>`).join("");
- return `<div class="profile-head"><input class="name" id="nameInput" value="${esc(c.name)}" placeholder="キャラクター名"><div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>`;
+ return `<div class="profile-head"><div class="profile-name">${esc(c.name)||"名称未設定"}</div><div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>`;
 }
 function zodiacBirthstoneCardHTML(c){
  let raw=(c.fields["誕生日"]||[])[0]||"",m=0,d=0,match=raw.match(/(\d+)月(\d+)日/);if(match){m=Number(match[1]);d=Number(match[2])}
@@ -551,7 +605,7 @@ function renderEditor(){
  const c=getCurrent(); if(!c){$("#editor").innerHTML='<div class="empty">「＋ 新規キャラ」からキャラクターを作成できます。</div>';updatePersistentUI();return}
  $("#editor").innerHTML=`
  ${profileHeaderHTML(c)}
- <div class="editor-actions"><button class="btn" id="oppositeBtn">⇄ 対極キャラを作成</button><button class="btn" id="clearAllBtn">すべてクリア</button><button class="btn" id="randomAllBtn" title="性別を男性または女性に設定してから使用できます">🎲 すべてランダム</button></div>
+
  <div class="field-groups">${FIELD_GROUPS.map(group=>`
    <section class="field-group">
      <div class="group-heading">
@@ -561,7 +615,7 @@ function renderEditor(){
      <div class="grid">${group.fields.map(cat=>cat==="__性別年齢__"?genderAgeStackHTML(c):cat==="__誕生日星座__"?birthdayCardHTML(c):cat==="__星座誕生石__"?zodiacBirthstoneCardHTML(c):cat==="__呼称__"?callTermsHTML(c):cat==="__体格__"?bodyBuildHTML(c):cat==="__髪__"?hairGroupHTML(c):cat==="__肌目__"?skinEyesHTML(c):fieldHTML(cat,c.fields[cat]||[])).join("")}</div>
    </section>`).join("")}</div>
 `;
- $("#nameInput").oninput=e=>{c.name=e.target.value;save();renderList()}
+ const drawerName=$("#drawerName");if(drawerName)drawerName.value=c.name||"";
  const headGender=$("#headGender"),headAge=$("#headAge"),headMonth=$("#headBirthMonth"),headDay=$("#headBirthDay");
  if(headGender)headGender.onchange=e=>{c.fields["性別"]=e.target.value?[e.target.value]:[];if(e.target.value!=="女性")c.fields["胸"]=[];save();renderEditor()};
  if(headAge)headAge.onchange=e=>{c.fields["年齢"]=e.target.value?[e.target.value]:[];save()};
@@ -940,12 +994,23 @@ function renderOptions(){
 }
 function addCustom(){const v=$("#customInput").value.trim();if(!v)return;if(!custom[activeCat])custom[activeCat]=[];if(!allOptions(activeCat).includes(v))custom[activeCat].push(v);const c=getCurrent();if(!c.fields[activeCat].includes(v))c.fields[activeCat].push(v);$("#customInput").value="";save();renderOptions();renderEditor()}
 $("#newBtn").onclick=newChar;
+function openToolDrawer(){document.body.classList.add("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","true");const c=getCurrent();if(c)$("#drawerName").value=c.name||""}
+function closeToolDrawer(){document.body.classList.remove("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","false")}
+$("#drawerToggle").onclick=()=>document.body.classList.contains("drawer-open")?closeToolDrawer():openToolDrawer();
+$("#drawerClose").onclick=closeToolDrawer;
+$("#drawerShade").onclick=closeToolDrawer;
+$("#drawerName").oninput=e=>{const c=getCurrent();if(!c)return;c.name=e.target.value;save();renderList();const n=document.querySelector(".profile-name");if(n)n.textContent=c.name||"名称未設定"};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeToolDrawer()});
+$("#oppositeBtn").onclick=()=>{if(getCurrent())$("#oppositeModal").classList.add("show")};
+$("#clearAllBtn").onclick=()=>{if(getCurrent())clearAll()};
+$("#randomAllBtn").onclick=()=>{if(getCurrent())randomAll()};
 $("#headerSaveBtn").onclick=()=>{if(getCurrent()){save();toast("保存しました")}};
 $("#headerLockBtn").onclick=toggleLock;
 $("#headerDeleteBtn").onclick=deleteCurrent;
 $("#sideMemo").oninput=e=>{const c=getCurrent();if(c){c.notes=e.target.value;save()}};
- $("#libraryToggle").onclick=()=>{const box=document.querySelector(".header-library");const opened=box.classList.toggle("expanded");$("#libraryToggle").setAttribute("aria-expanded",String(opened));if(opened)$("#charSearch").focus()};
-$("#charSearch").oninput=()=>{document.querySelector(".header-library")?.classList.add("expanded");$("#libraryToggle").setAttribute("aria-expanded","true");renderList()}; $("#optionSearch").oninput=renderOptions; $("#customAdd").onclick=addCustom; $("#customInput").onkeydown=e=>{if(e.key==="Enter")addCustom()};
+ $("#libraryToggle").onclick=()=>{const list=$("#charList");const hidden=list.classList.toggle("collapsed");$("#libraryToggle").setAttribute("aria-expanded",String(!hidden))};
+ $("#charSearch").oninput=renderList;
+ $("#optionSearch").oninput=renderOptions; $("#customAdd").onclick=addCustom; $("#customInput").onkeydown=e=>{if(e.key==="Enter")addCustom()};
 
 $("#oppositeClose").onclick=()=>$("#oppositeModal").classList.remove("show");
 $("#oppositeModal").onclick=e=>{if(e.target===$("#oppositeModal")[0])$("#oppositeModal").classList.remove("show")};

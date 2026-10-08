@@ -308,6 +308,26 @@ body.drawer-open .drawer-shade{display:block}
  .profile-meta .head-birthday{grid-column:1/-1;display:grid!important;grid-template-columns:1fr 1fr;width:100%!important}
  .editor{padding:12px}
 }
+
+/* v41 character identity and portrait */
+.profile-head{display:block!important}
+.identity-layout{display:grid;grid-template-columns:minmax(0,1fr) 174px;gap:20px;align-items:start}
+.identity-left{min-width:0}
+.name-edit,.ruby-edit{display:flex;flex-direction:column;gap:5px;margin-bottom:9px}
+.name-edit label,.ruby-edit label{font-size:12px;color:var(--muted)}
+.name-edit .name{width:100%;min-width:0;margin:0;padding:9px 12px;font-size:20px}
+.ruby-edit input{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:#30343a;color:var(--text);font:inherit}
+.name-preview{font-size:21px;font-weight:700;margin:12px 0 14px;overflow-wrap:anywhere}
+.name-preview rt{font-size:11px;font-weight:400}
+.portrait-section{width:174px}
+.portrait-frame{height:210px;width:150px;margin:0 auto 8px;background:#30343a;border:1px dashed #777;border-radius:7px;display:flex;align-items:center;justify-content:center;text-align:center;color:#aaa;font-size:12px;overflow:hidden;position:relative;touch-action:none;cursor:grab}
+.portrait-frame img{position:absolute;width:100%;height:100%;object-fit:cover;user-select:none;pointer-events:none;transform-origin:center center}
+.portrait-upload{width:100%}
+.portrait-controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.portrait-controls label{font-size:11px;width:100%}
+.portrait-controls input{width:100%}
+.portrait-controls .btn{font-size:11px;flex:1;padding:5px}
+@media(max-width:750px){.identity-layout{grid-template-columns:minmax(0,1fr) 110px;gap:10px}.portrait-section{width:110px}.portrait-frame{width:105px;height:145px}.name-edit .name{font-size:16px}.name-preview{font-size:16px}.profile-meta{grid-template-columns:1fr 1fr!important}}
 </style>
 </head>
 <body>
@@ -316,8 +336,6 @@ body.drawer-open .drawer-shade{display:block}
 <div id="drawerShade" class="drawer-shade"></div>
 <nav id="toolDrawer" class="tool-drawer" aria-label="キャラクター操作メニュー">
  <div class="drawer-heading"><strong>キャラクター操作</strong><button class="btn" id="drawerClose" aria-label="閉じる">✕</button></div>
- <label class="drawer-label" for="drawerName">キャラクター名</label>
- <input class="search" id="drawerName" placeholder="キャラクター名を入力">
  <div class="drawer-actions"><button class="btn primary" id="headerSaveBtn">保存</button><button class="btn" id="headerLockBtn">🔓 ロック</button><button class="btn danger" id="headerDeleteBtn">削除</button></div>
  <div class="drawer-separator"></div>
  <div class="drawer-actions"><button class="btn primary" id="newBtn">＋ 新規キャラ</button><button class="btn" id="libraryToggle" aria-expanded="true">キャラクター一覧 <span id="charCount"></span></button></div>
@@ -553,7 +571,7 @@ function renderList(){
 }
 function newChar(){
  const c={id:uid(),name:"",notes:"",locked:false,fields:{}}; CATS.forEach(k=>c.fields[k]=[]);
- chars.unshift(c); current=c.id; save();renderList();renderEditor();openToolDrawer();setTimeout(()=>$("#drawerName")?.focus(),0)
+ chars.unshift(c); current=c.id; save();renderList();renderEditor();closeToolDrawer();setTimeout(()=>$("#nameInput")?.focus(),0)
 }
 function updatePersistentUI(){
  const c=getCurrent();
@@ -592,7 +610,17 @@ function profileHeaderHTML(c){
  const months=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${m===i+1?"selected":""}>${i+1}月</option>`).join("");
  const max=m?new Date(2024,m,0).getDate():31;
  const days=Array.from({length:max},(_,i)=>`<option value="${i+1}" ${d===i+1?"selected":""}>${i+1}日</option>`).join("");
- return `<div class="profile-head"><div class="profile-name">${esc(c.name)||"名称未設定"}</div><div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>`;
+ return `<div class="profile-head"><div class="identity-layout"><div class="identity-left">
+ <div class="name-edit"><label>キャラクター名</label><input class="name" id="nameInput" value="${esc(c.name)}" placeholder="キャラクター名"></div>
+ <div class="ruby-edit"><label>ふりがな（名前全体）</label><input id="rubyInput" value="${esc(c.ruby||"")}" placeholder="しば やすとら"></div>
+ <div class="name-preview"><ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby></div>
+ <div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>
+ <div class="portrait-section"><div class="portrait-frame" id="portraitFrame" title="画像をドラッグして位置を調整">
+ ${c.portrait?.data?`<img id="portraitImg" draggable="false" src="${c.portrait.data}" style="transform:translate(${Number(c.portrait.x)||0}px,${Number(c.portrait.y)||0}px) scale(${Number(c.portrait.zoom)||1})">`:`<span>画像を追加<br>＋</span>`}
+ </div><input type="file" id="portraitFile" accept="image/*" hidden>
+ <button class="btn portrait-upload" id="portraitChoose">画像を選ぶ</button>
+ <div class="portrait-controls" ${c.portrait?.data?"":"hidden"}><label>拡大・縮小 <input id="portraitZoom" type="range" min="1" max="3" step=".05" value="${Number(c.portrait?.zoom)||1}"></label><button class="btn" id="portraitReset">位置リセット</button><button class="btn" id="portraitDelete">削除</button></div>
+ </div></div></div>`;
 }
 function zodiacBirthstoneCardHTML(c){
  let raw=(c.fields["誕生日"]||[])[0]||"",m=0,d=0,match=raw.match(/(\d+)月(\d+)日/);if(match){m=Number(match[1]);d=Number(match[2])}
@@ -600,6 +628,37 @@ function zodiacBirthstoneCardHTML(c){
  return groupedFieldCardHTML(c,"星座・誕生石",["星座","誕生石"]);
 }
 
+
+function setupPortrait(c){
+ const frame=$("#portraitFrame"),file=$("#portraitFile");
+ const choose=()=>file.click();
+ frame.onclick=e=>{if(!c.portrait?.data)choose()};
+ $("#portraitChoose").onclick=choose;
+ file.onchange=async e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  if(!f.type.startsWith("image/")){alert("画像ファイルを選んでください");return}
+  const url=URL.createObjectURL(f);
+  try{
+   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});
+   const canvas=document.createElement("canvas"),max=700,scale=Math.min(1,max/Math.max(img.width,img.height));
+   canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+   canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+   c.portrait={data:canvas.toDataURL("image/jpeg",.78),x:0,y:0,zoom:1};
+   try{save();renderEditor()}catch(err){alert("画像の保存容量が足りません。より小さい画像を選んでください。")}
+  }catch{alert("画像を読み込めませんでした")}finally{URL.revokeObjectURL(url);file.value=""}
+ };
+ if(!c.portrait?.data)return;
+ const img=$("#portraitImg"),zoom=$("#portraitZoom");
+ const paint=()=>{img.style.transform=`translate(${c.portrait.x||0}px,${c.portrait.y||0}px) scale(${c.portrait.zoom||1})`};
+ zoom.oninput=e=>{c.portrait.zoom=Number(e.target.value);paint();save()};
+ $("#portraitReset").onclick=()=>{c.portrait.x=0;c.portrait.y=0;c.portrait.zoom=1;zoom.value=1;paint();save()};
+ $("#portraitDelete").onclick=()=>{if(confirm("画像を削除しますか？")){delete c.portrait;save();renderEditor()}};
+ let start=null;
+ frame.onpointerdown=e=>{if(!c.portrait?.data)return;start={x:e.clientX,y:e.clientY,px:c.portrait.x||0,py:c.portrait.y||0};frame.setPointerCapture(e.pointerId)};
+ frame.onpointermove=e=>{if(!start)return;c.portrait.x=Math.round(start.px+e.clientX-start.x);c.portrait.y=Math.round(start.py+e.clientY-start.y);paint()};
+ frame.onpointerup=()=>{if(start){start=null;save()}};
+ frame.onpointercancel=()=>{start=null};
+}
 function renderEditor(){
  const __bodyCurrent=getCurrent(); if(__bodyCurrent)ensureBodyFields(__bodyCurrent);
  const c=getCurrent(); if(!c){$("#editor").innerHTML='<div class="empty">「＋ 新規キャラ」からキャラクターを作成できます。</div>';updatePersistentUI();return}
@@ -615,7 +674,10 @@ function renderEditor(){
      <div class="grid">${group.fields.map(cat=>cat==="__性別年齢__"?genderAgeStackHTML(c):cat==="__誕生日星座__"?birthdayCardHTML(c):cat==="__星座誕生石__"?zodiacBirthstoneCardHTML(c):cat==="__呼称__"?callTermsHTML(c):cat==="__体格__"?bodyBuildHTML(c):cat==="__髪__"?hairGroupHTML(c):cat==="__肌目__"?skinEyesHTML(c):fieldHTML(cat,c.fields[cat]||[])).join("")}</div>
    </section>`).join("")}</div>
 `;
- const drawerName=$("#drawerName");if(drawerName)drawerName.value=c.name||"";
+ 
+ $("#nameInput").oninput=e=>{c.name=e.target.value;save();renderList();const p=$(".name-preview");if(p)p.innerHTML=`<ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby>`};
+ $("#rubyInput").oninput=e=>{c.ruby=e.target.value;save();const p=$(".name-preview");if(p)p.innerHTML=`<ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby>`};
+ setupPortrait(c);
  const headGender=$("#headGender"),headAge=$("#headAge"),headMonth=$("#headBirthMonth"),headDay=$("#headBirthDay");
  if(headGender)headGender.onchange=e=>{c.fields["性別"]=e.target.value?[e.target.value]:[];if(e.target.value!=="女性")c.fields["胸"]=[];save();renderEditor()};
  if(headAge)headAge.onchange=e=>{c.fields["年齢"]=e.target.value?[e.target.value]:[];save()};
@@ -994,12 +1056,12 @@ function renderOptions(){
 }
 function addCustom(){const v=$("#customInput").value.trim();if(!v)return;if(!custom[activeCat])custom[activeCat]=[];if(!allOptions(activeCat).includes(v))custom[activeCat].push(v);const c=getCurrent();if(!c.fields[activeCat].includes(v))c.fields[activeCat].push(v);$("#customInput").value="";save();renderOptions();renderEditor()}
 $("#newBtn").onclick=newChar;
-function openToolDrawer(){document.body.classList.add("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","true");const c=getCurrent();if(c)$("#drawerName").value=c.name||""}
+function openToolDrawer(){document.body.classList.add("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","true");}
 function closeToolDrawer(){document.body.classList.remove("drawer-open");$("#drawerToggle").setAttribute("aria-expanded","false")}
 $("#drawerToggle").onclick=()=>document.body.classList.contains("drawer-open")?closeToolDrawer():openToolDrawer();
 $("#drawerClose").onclick=closeToolDrawer;
 $("#drawerShade").onclick=closeToolDrawer;
-$("#drawerName").oninput=e=>{const c=getCurrent();if(!c)return;c.name=e.target.value;save();renderList();const n=document.querySelector(".profile-name");if(n)n.textContent=c.name||"名称未設定"};
+
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeToolDrawer()});
 $("#oppositeBtn").onclick=()=>{if(getCurrent())$("#oppositeModal").classList.add("show")};
 $("#clearAllBtn").onclick=()=>{if(getCurrent())clearAll()};

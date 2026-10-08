@@ -485,6 +485,15 @@ body.drawer-open .drawer-shade{display:block}
   height:auto !important;
   box-sizing:border-box;
 }
+/* v60: the portrait image always uses a fixed virtual drawing surface. */
+.portrait-frame img#portraitImg{
+  width:112px!important;
+  height:148px!important;
+  left:50%!important;
+  top:50%!important;
+  max-width:none!important;
+  transform-origin:center center!important;
+}
 </style>
 </head>
 <body>
@@ -824,9 +833,17 @@ function setupPortrait(c){
  const img=$("#portraitImg"),zoom=$("#portraitZoom");
  // Store offsets relative to the frame size so desktop/mobile preserve the composition.
  const portraitFrameSize=()=>({w:frame.clientWidth||112,h:frame.clientHeight||148});
+ // Render every portrait in the same 112 x 148 virtual viewport. The outer
+ // scale alone changes with screen size, so zoom and cropping stay identical.
  const portraitOffsets=()=>{const f=portraitFrameSize();return {x:(Number(c.portrait.x)||0)*f.w/(Number(c.portrait.refWidth)||112),y:(Number(c.portrait.y)||0)*f.h/(Number(c.portrait.refHeight)||148)}};
- const paint=()=>{const o=portraitOffsets();img.style.transform=`translate(${o.x}px,${o.y}px) scale(${c.portrait.zoom||1})`};
+ const paint=()=>{
+   const f=portraitFrameSize(),o=portraitOffsets(),ratio=f.w/112;
+   const vx=o.x/ratio,vy=o.y/ratio;
+   img.style.transform=`translate(-50%, -50%) scale(${ratio}) translate(${vx}px,${vy}px) scale(${Number(c.portrait.zoom)||1})`;
+ };
  paint();
+ const portraitResizeObserver=typeof ResizeObserver!=="undefined"?new ResizeObserver(()=>{if(img.isConnected)paint();else portraitResizeObserver.disconnect()}):null;
+ portraitResizeObserver?.observe(frame);
  zoom.oninput=e=>{c.portrait.zoom=Number(e.target.value);paint();save()};
  $("#portraitReset").onclick=()=>{c.portrait.x=0;c.portrait.y=0;c.portrait.refWidth=portraitFrameSize().w;c.portrait.refHeight=portraitFrameSize().h;c.portrait.zoom=1;zoom.value=1;paint();save()};
  $("#portraitEditToggle").onclick=()=>{const controls=$(".portrait-controls");controls.hidden=!controls.hidden};

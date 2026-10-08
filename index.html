@@ -457,6 +457,9 @@ body.drawer-open .drawer-shade{display:block}
 .status-row .status-auto:disabled{opacity:.25;cursor:default}
 .status-manual label{color:#b6caff}
 @media(max-width:750px){.status-row{grid-template-columns:90px minmax(0,1fr) 50px 25px!important;gap:5px!important}}
+/* v54: per-field clear action beside random action */
+.field-head .field-clear{color:var(--muted);white-space:nowrap}
+.field-head .field-clear:hover{color:var(--text);border-color:var(--text)}
 </style>
 </head>
 <body>
@@ -897,6 +900,11 @@ function renderEditor(){
  if(headDay)headDay.onchange=saveHeaderBirthday;
  document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>openModal(b.dataset.add));
  document.querySelectorAll("[data-random]").forEach(b=>b.onclick=()=>randomOne(b.dataset.random));
+ document.querySelectorAll("[data-clear-field]").forEach(b=>b.onclick=()=>{
+   const c=getCurrent();if(!c||c.locked)return;
+   c.fields[b.dataset.clearField]=[];
+   save();renderEditor();toast(`${b.dataset.clearField}をクリアしました`);
+ });
  document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>removeTag(b.dataset.cat,b.dataset.remove));
  document.querySelectorAll("[data-call-open]").forEach(b=>b.onclick=()=>openModal(b.dataset.callOpen));
  document.querySelectorAll("[data-call-remove]").forEach(b=>b.onclick=()=>removeTag(b.dataset.callCat,b.dataset.callRemove));
@@ -926,6 +934,12 @@ function renderEditor(){
    };
    bd.onchange=updateZodiacDisplay;
  }
+ const birthClear=$("#birthClear");
+ if(birthClear)birthClear.onclick=()=>{
+   const c=getCurrent();if(!c||c.locked)return;
+   ["誕生日","星座","誕生石"].forEach(k=>c.fields[k]=[]);
+   save();renderEditor();toast("誕生日・星座・誕生石をクリアしました");
+ };
  const birthRandom=$("#birthRandom");
  if(birthRandom){
    birthRandom.onclick=()=>{
@@ -1028,7 +1042,7 @@ function birthdayCardHTML(c){
  const max=m?new Date(2024,m,0).getDate():31;
  const days=Array.from({length:max},(_,i)=>`<option value="${i+1}" ${d===i+1?"selected":""}>${i+1}日</option>`).join("");
  return `<div class="field birthday-card">
-  <div class="field-head"><div class="field-title">誕生日・星座・誕生石</div><button class="mini" id="birthRandom">🎲 ランダム</button></div>
+  <div class="field-head"><div class="field-title">誕生日・星座・誕生石</div><button class="mini" id="birthRandom">🎲 ランダム</button><button class="mini field-clear" id="birthClear" title="誕生日・星座・誕生石をクリア">× クリア</button></div>
   <div class="birth-info-grid">
    <div class="birth-info-section birth-date-section">
     <div class="birth-info-label">誕生日</div>
@@ -1100,7 +1114,7 @@ function fieldHTML(cat,vals){
      return `<span class="tag info-hover flower-tag" tabindex="0">${esc(v)} <button type="button" title="削除" data-remove="${esc(v)}" data-cat="${esc(cat)}">×</button>${popup}</span>`;
    }).join(""):`<span class="muted">未設定</span>`;
    return `<div class="field flower-field">
-     <div class="field-head"><div class="field-title">${cat}</div><button class="mini" data-random="${esc(cat)}">🎲 ランダム</button></div>
+     <div class="field-head"><div class="field-title">${cat}</div><button class="mini" data-random="${esc(cat)}">🎲 ランダム</button><button class="mini field-clear" data-clear-field="${esc(cat)}" title="${esc(cat)}をクリア">× クリア</button></div>
      <div class="tags">${tags}</div>
      <button class="add" data-add="${esc(cat)}">＋ 候補から選ぶ</button>
      <div class="flower-source">花名にマウスを乗せると解説を表示</div>
@@ -1110,7 +1124,7 @@ function fieldHTML(cat,vals){
  const c=getCurrent();
  const gender=(c?.fields?.["性別"]||[])[0]||"";
  if(cat==="胸" && gender!=="女性")return "";
- return `<div class="field"><div class="field-head"><div class="field-title">${esc(cat)}</div><button class="mini" data-random="${esc(cat)}">🎲 ランダム</button></div>
+ return `<div class="field"><div class="field-head"><div class="field-title">${esc(cat)}</div><button class="mini" data-random="${esc(cat)}">🎲 ランダム</button><button class="mini field-clear" data-clear-field="${esc(cat)}" title="${esc(cat)}をクリア">× クリア</button></div>
  <div class="tags">${vals.length?vals.map(v=>`<span class="tag">${esc(v)}<button data-cat="${esc(cat)}" data-remove="${esc(v)}">×</button></span>`).join(""):'<span style="color:var(--muted);font-size:13px">未設定</span>'}</div>
  <button class="add" data-add="${esc(cat)}">＋ 候補から選ぶ</button></div>`
 }

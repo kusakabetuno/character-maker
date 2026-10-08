@@ -183,6 +183,49 @@ main{max-width:1280px;margin:auto;padding:22px;display:grid;grid-template-column
 .head-birthday{display:flex;gap:5px}.head-birthday .profile-select{min-width:72px}
 .editor-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-bottom:18px}.editor-actions .btn{white-space:nowrap}
 @media(max-width:900px){.profile-head{align-items:stretch;flex-direction:column}.profile-meta{flex-wrap:wrap}.profile-select{flex:1}.head-birthday{flex:1 1 150px}.head-birthday .profile-select{flex:1}}
+
+/* v38: phone-first layout. Two field cards per row, no horizontal overflow. */
+@media(max-width:750px){
+ body{overflow-x:hidden}
+ header{position:relative}
+ .top{padding:10px 12px;gap:7px;flex-wrap:wrap;align-items:center}
+ .top h1{font-size:17px;flex:1 0 100%;white-space:nowrap}
+ .top .spacer{display:none}
+ .top .btn{font-size:12px;padding:8px 10px;white-space:nowrap;flex:1 1 auto}
+ main{display:flex;flex-direction:column;gap:12px;padding:12px;min-width:0}
+ .sidebar{height:auto;position:static;padding:12px;min-width:0}
+ .side-memo{flex-basis:auto;margin-top:0;margin-bottom:10px;padding-top:0;border-top:0}
+ .side-memo textarea{height:64px;min-height:64px;resize:vertical}
+ #charList{min-height:0;max-height:130px;flex:0 1 auto}
+ .side-head-bottom{margin-top:7px;padding-top:7px}
+ .editor{padding:13px;min-height:0;min-width:0}
+ .profile-head{gap:8px;margin-bottom:8px}
+ .profile-head .name{font-size:19px;min-width:0;padding:5px 0}
+ .profile-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;width:100%}
+ .profile-select{width:100%;min-width:0;font-size:14px;padding:8px 5px}
+ .head-birthday{display:grid;grid-template-columns:1fr 1fr;gap:5px;grid-column:1 / -1;min-width:0}
+ .editor-actions{justify-content:stretch;gap:6px}
+ .editor-actions .btn{flex:1 1 auto;white-space:normal;font-size:11px;padding:8px 5px}
+ .field-groups{gap:20px}
+ .group-heading{flex-wrap:wrap;gap:4px 8px}
+ .group-title{font-size:15px}
+ .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .field{padding:8px;font-size:12px;min-width:0}
+ .field-head{gap:4px;flex-wrap:wrap}
+ .field-title{font-size:12px;min-width:0;overflow-wrap:anywhere}
+ .mini{font-size:10px;padding:4px 5px}
+ .tag{font-size:11px;overflow-wrap:anywhere}
+ .field.call-card{padding:9px}
+ .field.call-card .call-row{padding:6px 0}
+ .field.call-card .call-pick{font-size:10px}
+ .add{font-size:11px;padding:8px 3px}
+ .info-pop{width:min(245px,calc(100vw - 45px))}
+}
+@media(max-width:380px){
+ .grid{gap:6px}
+ .field{padding:7px}
+ .field-head{align-items:flex-start}
+}
 </style>
 </head>
 <body>

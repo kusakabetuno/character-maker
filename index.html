@@ -321,7 +321,7 @@ body.drawer-open .drawer-shade{display:block}
 .name-preview rt{font-size:11px;font-weight:400}
 .portrait-section{width:174px}
 .portrait-frame{height:210px;width:150px;margin:0 auto 8px;background:#30343a;border:1px dashed #777;border-radius:7px;display:flex;align-items:center;justify-content:center;text-align:center;color:#aaa;font-size:12px;overflow:hidden;position:relative;touch-action:none;cursor:grab}
-.portrait-frame img{position:absolute;width:100%;height:100%;object-fit:cover;user-select:none;pointer-events:none;transform-origin:center center}
+.portrait-frame img{position:absolute;width:100%;height:100%;object-fit:contain;user-select:none;pointer-events:none;transform-origin:center center}
 .portrait-upload{width:100%}
 .portrait-controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .portrait-controls label{font-size:11px;width:100%}
@@ -422,6 +422,8 @@ body.drawer-open .drawer-shade{display:block}
  .portrait-toolbar{width:82px;gap:3px!important}
  .portrait-toolbar .btn{min-height:23px!important}
 }
+/* v47: fit the full uploaded portrait inside the frame before manual cropping */
+.portrait-frame img{object-fit:contain!important}
 </style>
 </head>
 <body>
@@ -711,13 +713,13 @@ function profileHeaderHTML(c){
  <div class="ruby-edit"><label>ふりがな（名前全体）</label><input id="rubyInput" value="${esc(c.ruby||"")}" placeholder="しば やすとら"></div>
  </details>
  <div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>
- <div class="portrait-section"><div class="portrait-frame" id="portraitFrame" title="画像をドラッグして位置を調整">
+ <div class="portrait-section"><div class="portrait-frame" id="portraitFrame" title="画像をドラッグして位置を調整。⚙から拡大・縮小できます">
  ${c.portrait?.data?`<img id="portraitImg" draggable="false" src="${c.portrait.data}" style="transform:translate(${Number(c.portrait.x)||0}px,${Number(c.portrait.y)||0}px) scale(${Number(c.portrait.zoom)||1})">`:`<span>画像を追加<br>＋</span>`}
  </div><input type="file" id="portraitFile" accept="image/*" hidden>
  <div class="portrait-toolbar"><button class="btn portrait-upload" id="portraitChoose" title="画像を選ぶ・変更する" aria-label="画像を選ぶ・変更する">▣</button>
  <button class="btn" id="portraitEditToggle" title="画像のサイズ・位置を調整" aria-label="画像の調整を開く" ${c.portrait?.data?"":"disabled"}>⚙</button>
  <button class="btn" id="portraitDelete" title="画像を削除" aria-label="画像を削除" ${c.portrait?.data?"":"disabled"}>×</button></div>
- <div class="portrait-controls" hidden><label>拡大・縮小 <input id="portraitZoom" type="range" min="1" max="3" step=".05" value="${Number(c.portrait?.zoom)||1}"></label><button class="btn" id="portraitReset">位置リセット</button></div>
+ <div class="portrait-controls" hidden><label>拡大・縮小 <input id="portraitZoom" type="range" min="0.5" max="5" step=".05" value="${Number(c.portrait?.zoom)||1}"></label><button class="btn" id="portraitReset">全体表示に戻す</button></div>
  </div></div></div>`;
 }
 function zodiacBirthstoneCardHTML(c){

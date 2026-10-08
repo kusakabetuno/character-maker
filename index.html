@@ -328,6 +328,20 @@ body.drawer-open .drawer-shade{display:block}
 .portrait-controls input{width:100%}
 .portrait-controls .btn{font-size:11px;flex:1;padding:5px}
 @media(max-width:750px){.identity-layout{grid-template-columns:minmax(0,1fr) 110px;gap:10px}.portrait-section{width:110px}.portrait-frame{width:105px;height:145px}.name-edit .name{font-size:16px}.name-preview{font-size:16px}.profile-meta{grid-template-columns:1fr 1fr!important}}
+
+/* v42: collapsible name inputs and compact image controls */
+.name-preview{margin:3px 0 9px;min-height:32px}
+.name-settings{margin:0 0 14px;border-bottom:1px solid var(--line);padding-bottom:9px}
+.name-settings summary{cursor:pointer;color:var(--muted);font-size:12px;list-style:none;display:inline-flex;align-items:center;padding:5px 0}
+.name-settings summary::-webkit-details-marker{display:none}
+.name-settings[open] summary{margin-bottom:12px}
+.name-settings .name-edit,.name-settings .ruby-edit{margin-bottom:9px}
+.portrait-toolbar{display:flex;gap:4px;justify-content:center}
+.portrait-toolbar .btn{flex:1;min-width:0;padding:5px 4px;font-size:15px;line-height:1.1}
+.portrait-controls{padding:7px 0 0;margin:0}
+.portrait-controls[hidden]{display:none!important}
+.portrait-controls .btn{width:100%;padding:5px}
+@media(max-width:750px){.portrait-toolbar .btn{font-size:13px;padding:5px 2px}.name-preview{font-size:19px}}
 </style>
 </head>
 <body>
@@ -611,15 +625,19 @@ function profileHeaderHTML(c){
  const max=m?new Date(2024,m,0).getDate():31;
  const days=Array.from({length:max},(_,i)=>`<option value="${i+1}" ${d===i+1?"selected":""}>${i+1}日</option>`).join("");
  return `<div class="profile-head"><div class="identity-layout"><div class="identity-left">
+ <div class="name-preview"><ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby></div>
+ <details class="name-settings"><summary>✎ 名前・ふりがなを編集</summary>
  <div class="name-edit"><label>キャラクター名</label><input class="name" id="nameInput" value="${esc(c.name)}" placeholder="キャラクター名"></div>
  <div class="ruby-edit"><label>ふりがな（名前全体）</label><input id="rubyInput" value="${esc(c.ruby||"")}" placeholder="しば やすとら"></div>
- <div class="name-preview"><ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby></div>
+ </details>
  <div class="profile-meta"><select id="headGender" class="profile-select">${genderOpts}</select><select id="headAge" class="profile-select">${ageOpts}</select><div class="head-birthday"><select id="headBirthMonth" class="profile-select"><option value="">月</option>${months}</select><select id="headBirthDay" class="profile-select"><option value="">日</option>${days}</select></div></div></div>
  <div class="portrait-section"><div class="portrait-frame" id="portraitFrame" title="画像をドラッグして位置を調整">
  ${c.portrait?.data?`<img id="portraitImg" draggable="false" src="${c.portrait.data}" style="transform:translate(${Number(c.portrait.x)||0}px,${Number(c.portrait.y)||0}px) scale(${Number(c.portrait.zoom)||1})">`:`<span>画像を追加<br>＋</span>`}
  </div><input type="file" id="portraitFile" accept="image/*" hidden>
- <button class="btn portrait-upload" id="portraitChoose">画像を選ぶ</button>
- <div class="portrait-controls" ${c.portrait?.data?"":"hidden"}><label>拡大・縮小 <input id="portraitZoom" type="range" min="1" max="3" step=".05" value="${Number(c.portrait?.zoom)||1}"></label><button class="btn" id="portraitReset">位置リセット</button><button class="btn" id="portraitDelete">削除</button></div>
+ <div class="portrait-toolbar"><button class="btn portrait-upload" id="portraitChoose" title="画像を選ぶ・変更する" aria-label="画像を選ぶ・変更する">▣</button>
+ <button class="btn" id="portraitEditToggle" title="画像のサイズ・位置を調整" aria-label="画像の調整を開く" ${c.portrait?.data?"":"disabled"}>⚙</button>
+ <button class="btn" id="portraitDelete" title="画像を削除" aria-label="画像を削除" ${c.portrait?.data?"":"disabled"}>×</button></div>
+ <div class="portrait-controls" hidden><label>拡大・縮小 <input id="portraitZoom" type="range" min="1" max="3" step=".05" value="${Number(c.portrait?.zoom)||1}"></label><button class="btn" id="portraitReset">位置リセット</button></div>
  </div></div></div>`;
 }
 function zodiacBirthstoneCardHTML(c){
@@ -652,6 +670,7 @@ function setupPortrait(c){
  const paint=()=>{img.style.transform=`translate(${c.portrait.x||0}px,${c.portrait.y||0}px) scale(${c.portrait.zoom||1})`};
  zoom.oninput=e=>{c.portrait.zoom=Number(e.target.value);paint();save()};
  $("#portraitReset").onclick=()=>{c.portrait.x=0;c.portrait.y=0;c.portrait.zoom=1;zoom.value=1;paint();save()};
+ $("#portraitEditToggle").onclick=()=>{const controls=$(".portrait-controls");controls.hidden=!controls.hidden};
  $("#portraitDelete").onclick=()=>{if(confirm("画像を削除しますか？")){delete c.portrait;save();renderEditor()}};
  let start=null;
  frame.onpointerdown=e=>{if(!c.portrait?.data)return;start={x:e.clientX,y:e.clientY,px:c.portrait.x||0,py:c.portrait.y||0};frame.setPointerCapture(e.pointerId)};

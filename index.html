@@ -469,6 +469,13 @@ body.drawer-open .drawer-shade{display:block}
  .field-head .action-label{display:none!important}
  .field-head .field-clear .action-emoji{font-size:21px}
 }
+
+/* v56 cloud account and sync controls */
+.cloud-panel{padding:12px;border:1px solid var(--line);border-radius:10px;margin:12px 0;background:rgba(140,160,190,.07)}
+.cloud-panel strong{font-size:13px}.cloud-panel p{font-size:12px;color:var(--muted);line-height:1.65;margin:7px 0}
+.cloud-panel input{width:100%;min-width:0;padding:9px;margin:5px 0;border-radius:7px;border:1px solid var(--line);background:#252930;color:var(--text)}
+.cloud-actions{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.cloud-actions .btn{flex:1 1 120px}
+.cloud-panel .cloud-status{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -485,6 +492,10 @@ body.drawer-open .drawer-shade{display:block}
  <div class="drawer-separator"></div>
  <div class="drawer-actions"><button class="btn" id="oppositeBtn">⇄ 対極キャラを作成</button><button class="btn" id="clearAllBtn">すべてクリア</button><button class="btn" id="randomAllBtn">🎲 すべてランダム</button><button class="btn primary" id="templateBtn">🎭 キャラテンプレート</button></div>
  <div class="drawer-separator"></div>
+ <div class="cloud-panel" id="cloudPanel"><strong>☁ クラウド同期</strong><p id="cloudAccount">接続準備中…</p>
+ <div id="cloudLogin"><input id="cloudEmail" type="email" placeholder="メールアドレス" autocomplete="username"><input id="cloudPassword" type="password" placeholder="パスワード" autocomplete="current-password"><button class="btn primary" id="cloudSignIn">ログイン</button></div>
+ <div id="cloudControls" hidden><div class="cloud-actions"><button class="btn primary" id="cloudUpload">この端末 → クラウド</button><button class="btn" id="cloudDownload">クラウド → この端末</button></div><div class="cloud-actions"><button class="btn" id="cloudAutoToggle">自動同期：OFF</button><button class="btn" id="cloudSignOut">ログアウト</button></div></div>
+ <p class="cloud-status" id="cloudStatus">初回はJSONバックアップを保存し、同期する方向を選んでください。</p></div>
  <div class="drawer-actions"><button class="btn" id="exportBtn">バックアップ</button><button class="btn" id="importBtn">復元</button></div>
  <input type="file" id="importFile" accept=".json" hidden>
 </nav>
@@ -533,6 +544,7 @@ body.drawer-open .drawer-shade{display:block}
 <div class="footer-actions"><button class="btn" id="oppositeClose">キャンセル</button></div>
 </div></div>
 <div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 const BASE = {"性別":["男性","女性","中性的","性別を明かしていない","性別を意識していない"],
 "年齢":["10代前半","10代後半","20代前半","20代後半","30代","40代","50代","60代","70代以上","年齢不詳"],
@@ -692,7 +704,7 @@ if(!chars.some(c=>c.id===SAMPLE_AYUKAWA_RYUJI.id || c.name==="鮎川龍二（ユ
 
 const $=s=>document.querySelector(s);
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function save(){localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom));refreshCharacterStatus()}
+function save(){localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom));refreshCharacterStatus();scheduleCloudSave()}
 function toast(t){$("#toast").textContent=t;$("#toast").classList.add("show");setTimeout(()=>$("#toast").classList.remove("show"),1300)}
 function getCurrent(){const c=chars.find(c=>c.id===current);if(c){c.fields=c.fields||{};CATS.forEach(k=>{if(!Array.isArray(c.fields[k]))c.fields[k]=[]})}return c}
 function visibleOptions(cat){
@@ -1361,7 +1373,85 @@ $("#modalWrap").addEventListener("mousedown",e=>{
 });
 $("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({version:1,characters:chars,customOptions:custom},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="character-maker-backup.json";a.click();URL.revokeObjectURL(a.href)};
 $("#importBtn").onclick=()=>$("#importFile").click(); $("#importFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.characters))throw 0;chars=d.characters;custom=d.customOptions||{};current=chars[0]?.id||null;save();renderList();renderEditor();toast("バックアップを復元しました")}catch{alert("バックアップファイルを読み込めませんでした。")}e.target.value=""};
+
+// v56: explicit, guarded cloud synchronization. Images remain embedded in the JSON snapshot.
+const CLOUD_URL="https://ldyszfnuqhlmruprzqcv.supabase.co";
+const CLOUD_KEY="sb_publishable_trsAYpb_jxFXhN1UDauIXA_7xLYzfTX";
+let cloudClient=null,cloudUser=null,cloudAuto=false,cloudBusy=false,cloudTimer=null,cloudReady=false;
+const cloudStatus=t=>{const el=document.getElementById("cloudStatus");if(el)el.textContent=t};
+function cloudUI(){
+ document.getElementById("cloudLogin").hidden=!!cloudUser;
+ document.getElementById("cloudControls").hidden=!cloudUser;
+ document.getElementById("cloudAccount").textContent=cloudUser?`ログイン中：${cloudUser.email}`:"ログインするとPC・スマホで共有できます";
+ document.getElementById("cloudAutoToggle").textContent=`自動同期：${cloudAuto?"ON":"OFF"}`;
+}
+function cloudSnapshot(){return {version:1,characters:chars,customOptions:custom,updatedBy:"character-maker-v56"}}
+async function cloudRow(){
+ const {data,error}=await cloudClient.from("characters").select("id,character_data,updated_at").eq("user_id",cloudUser.id).order("updated_at",{ascending:false}).limit(1);
+ if(error)throw error;return data?.[0]||null;
+}
+async function cloudPush(silent=false){
+ if(!cloudUser||cloudBusy)return;
+ cloudBusy=true;cloudStatus("クラウドに保存しています…");
+ try{
+  const payload=cloudSnapshot();const size=new Blob([JSON.stringify(payload)]).size;
+  if(size>4*1024*1024)throw Error("データが4MBを超えています。画像のクラウド分離が必要なため、保存を中止しました。");
+  const row=await cloudRow();
+  let result;
+  if(row)result=await cloudClient.from("characters").update({character_data:payload,updated_at:new Date().toISOString()}).eq("id",row.id).eq("user_id",cloudUser.id);
+  else result=await cloudClient.from("characters").insert({user_id:cloudUser.id,character_data:payload});
+  if(result.error)throw result.error;
+  cloudReady=true;cloudStatus(`保存完了（${new Date().toLocaleTimeString("ja-JP")}）。${chars.length}体を同期しました。`);
+ }catch(e){cloudAuto=false;cloudUI();cloudStatus("保存失敗："+(e.message||e));if(!silent)alert("クラウド保存に失敗しました。ローカルデータは残っています。")}
+ finally{cloudBusy=false}
+}
+async function cloudPull(){
+ if(!cloudUser||cloudBusy)return;
+ cloudBusy=true;cloudStatus("クラウドを確認しています…");
+ try{
+  const row=await cloudRow();if(!row){cloudStatus("クラウドにはまだ保存データがありません。この端末からアップロードできます。");return}
+  const data=row.character_data;
+  if(!Array.isArray(data?.characters))throw Error("クラウドの保存形式が不正です");
+  if(!confirm(`クラウドの${data.characters.length}体を読み込みます。現在の端末の${chars.length}体は置き換わります。JSONバックアップ済みですか？`)){
+   cloudStatus("読み込みをキャンセルしました。端末データは変更していません。");return;
+  }
+  cloudAuto=false;cloudReady=false;cloudUI();
+  chars=data.characters;custom=data.customOptions||{};current=chars[0]?.id||null;
+  localStorage.setItem(STORE,JSON.stringify(chars));localStorage.setItem(CUSTOM,JSON.stringify(custom));
+  renderList();renderEditor();cloudReady=true;cloudStatus(`読み込み完了：${chars.length}体。必要なら自動同期をONにしてください。`);
+ }catch(e){cloudStatus("読み込み失敗："+(e.message||e))}
+ finally{cloudBusy=false}
+}
+function scheduleCloudSave(){
+ if(!cloudAuto||!cloudReady||!cloudUser)return;
+ clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPush(true),1800);
+}
+async function initCloud(){
+ if(!window.supabase?.createClient){cloudStatus("Supabaseライブラリを読み込めませんでした。ネット接続を確認してください。");return}
+ cloudClient=window.supabase.createClient(CLOUD_URL,CLOUD_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+ const {data:{session}}=await cloudClient.auth.getSession();cloudUser=session?.user||null;cloudUI();
+ cloudClient.auth.onAuthStateChange((event,session)=>{cloudUser=session?.user||null;if(!cloudUser){cloudAuto=false;cloudReady=false}cloudUI()});
+ document.getElementById("cloudSignIn").onclick=async()=>{
+  const email=document.getElementById("cloudEmail").value.trim(),password=document.getElementById("cloudPassword").value;
+  if(!email||!password){cloudStatus("メールアドレスとパスワードを入力してください。");return}
+  cloudStatus("ログイン中…");
+  const {data,error}=await cloudClient.auth.signInWithPassword({email,password});
+  document.getElementById("cloudPassword").value="";
+  if(error){cloudStatus("ログイン失敗："+error.message);return}
+  cloudUser=data.user;cloudAuto=false;cloudReady=false;cloudUI();cloudStatus("ログイン成功。まず同期方向を選択してください。自動同期はOFFです。");
+ };
+ document.getElementById("cloudSignOut").onclick=async()=>{clearTimeout(cloudTimer);cloudAuto=false;cloudReady=false;await cloudClient.auth.signOut();cloudUser=null;cloudUI();cloudStatus("ログアウトしました。端末データはそのまま残ります。")};
+ document.getElementById("cloudUpload").onclick=async()=>{if(confirm(`この端末の${chars.length}体でクラウドデータを上書きします。続けますか？`))await cloudPush()};
+ document.getElementById("cloudDownload").onclick=cloudPull;
+ document.getElementById("cloudAutoToggle").onclick=()=>{
+  if(!cloudReady){cloudStatus("先にアップロードかダウンロードを一度実行してください。");return}
+  cloudAuto=!cloudAuto;cloudUI();cloudStatus(cloudAuto?"自動保存ON。編集内容は約2秒後にクラウドへ保存します。他端末では手動読み込みしてください。":"自動保存OFF。端末には引き続き保存されます。");
+ };
+ if(cloudUser)cloudStatus("ログイン済みです。同期方向を選んでください。自動同期はOFFです。");
+}
+
 renderList(); if(chars.length){current=chars[0].id;renderList();renderEditor()} else {updatePersistentUI()}
+initCloud().catch(e=>cloudStatus("クラウド初期化失敗："+e.message));
 </script>
 </body>
 </html>

@@ -366,6 +366,13 @@ body.drawer-open .drawer-shade{display:block}
  .portrait-toolbar .btn{min-height:23px!important;padding:2px!important}
  .profile-meta .profile-select{padding:6px!important}
 }
+
+/* v44: explicit open/close label for the name editor */
+.name-settings summary{display:inline-flex!important;align-items:center;cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:7px;padding:5px 9px!important;background:#30343a;color:var(--text)}
+.name-settings summary:hover{background:#3a4047}
+.name-collapse-label{display:none}
+.name-settings[open] .name-expand-label{display:none}
+.name-settings[open] .name-collapse-label{display:inline}
 </style>
 </head>
 <body>
@@ -650,7 +657,7 @@ function profileHeaderHTML(c){
  const days=Array.from({length:max},(_,i)=>`<option value="${i+1}" ${d===i+1?"selected":""}>${i+1}日</option>`).join("");
  return `<div class="profile-head"><div class="identity-layout"><div class="identity-left">
  <div class="name-preview"><ruby>${esc(c.name)||"名称未設定"}${c.ruby?`<rt>${esc(c.ruby)}</rt>`:""}</ruby></div>
- <details class="name-settings"><summary>✎ 名前・ふりがなを編集</summary>
+ <details class="name-settings"><summary><span class="name-expand-label">▾ 名前・ふりがなを編集</span><span class="name-collapse-label">▴ 名前・ふりがなの入力欄を閉じる</span></summary>
  <div class="name-edit"><label>キャラクター名</label><input class="name" id="nameInput" value="${esc(c.name)}" placeholder="キャラクター名"></div>
  <div class="ruby-edit"><label>ふりがな（名前全体）</label><input id="rubyInput" value="${esc(c.ruby||"")}" placeholder="しば やすとら"></div>
  </details>
